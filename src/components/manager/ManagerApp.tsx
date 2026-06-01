@@ -13,6 +13,7 @@ import { FilterBar } from "./FilterBar";
 import { IssueListPanel } from "./IssueListPanel";
 import { IssueDetailPanel } from "./IssueDetailPanel";
 import { CalendarView } from "./CalendarView";
+import { MobileBottomNav } from "./MobileBottomNav";
 
 export function ManagerApp() {
   const { issues, loading, error, refetch } = useIssues();
@@ -43,8 +44,8 @@ export function ManagerApp() {
   }, [issues, search, department, priority]);
 
   const selected = filtered.find((i) => i.id === selectedId) ?? null;
-
   const openCount = issues.filter((i) => i.status === "open").length;
+  const showMobileDetail = Boolean(selectedId && selected);
 
   async function patchIssue(
     id: string,
@@ -89,16 +90,33 @@ export function ManagerApp() {
     }
   }
 
+  function selectIssue(id: string) {
+    setSelectedId(id);
+  }
+
+  const detailProps = {
+    issue: selected,
+    disabled: mutating,
+    onWorkflowChange: handleWorkflowChange,
+    onComplete: handleComplete,
+    onRecall: handleRecall,
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f4f5f7]">
+    <div className="flex h-[100dvh] overflow-hidden bg-[#f4f5f7]">
       <Sidebar view={view} onViewChange={setView} />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-zinc-200 bg-white px-4 py-3">
+      <div className="flex min-w-0 flex-1 flex-col pb-[72px] lg:pb-0">
+        {/* Header — hidden on mobile when viewing issue detail */}
+        <header
+          className={`shrink-0 border-b border-zinc-200 bg-white px-4 py-3 ${showMobileDetail ? "hidden lg:block" : ""}`}
+        >
           <div className="flex flex-wrap items-center gap-3">
             <ViewToggle view={view} onViewChange={setView} />
-            <div>
-              <h1 className="text-2xl font-semibold text-zinc-900">Issues</h1>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl font-bold tracking-tight text-zinc-900 lg:text-2xl lg:font-semibold">
+                Issues
+              </h1>
               <p className="flex items-center gap-1.5 text-xs text-zinc-500">
                 {error ? (
                   <>
@@ -114,7 +132,15 @@ export function ManagerApp() {
               </p>
             </div>
 
-            <div className="relative ml-auto min-w-[200px] max-w-md flex-1">
+            <Link
+              href="/submit"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1a73e8] text-white shadow-md lg:hidden"
+              aria-label="New issue"
+            >
+              <Plus className="h-5 w-5" />
+            </Link>
+
+            <div className="relative hidden min-w-[200px] max-w-md flex-1 lg:block">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
               <input
                 type="search"
@@ -127,16 +153,30 @@ export function ManagerApp() {
 
             <Link
               href="/submit"
-              className="flex items-center gap-1.5 rounded-lg bg-[#1a73e8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1557b0]"
+              className="hidden items-center gap-1.5 rounded-lg bg-[#1a73e8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1557b0] lg:flex"
             >
               <Plus className="h-4 w-4" />
               New issue
             </Link>
           </div>
+
+          {/* Mobile search */}
+          <div className="relative mt-3 lg:hidden">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <input
+              type="search"
+              placeholder="Search issues…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border border-zinc-200 bg-zinc-50 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-[#1a73e8] focus:bg-white focus:ring-2 focus:ring-[#1a73e8]/20"
+            />
+          </div>
         </header>
 
         {error ? (
-          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          <div
+            className={`border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 ${showMobileDetail ? "hidden lg:block" : ""}`}
+          >
             {error}{" "}
             <button
               type="button"
@@ -148,62 +188,78 @@ export function ManagerApp() {
           </div>
         ) : null}
 
-        <FilterBar
-          department={department}
-          priority={priority}
-          onDepartmentChange={setDepartment}
-          onPriorityChange={setPriority}
-        />
+        <div className={showMobileDetail ? "hidden lg:block" : ""}>
+          <FilterBar
+            department={department}
+            priority={priority}
+            onDepartmentChange={setDepartment}
+            onPriorityChange={setPriority}
+          />
+        </div>
 
         {loading ? (
           <div className="flex flex-1 items-center justify-center gap-2 text-zinc-500">
             <Loader2 className="h-5 w-5 animate-spin" />
             Loading issues…
           </div>
-        ) : view === "list" ? (
-          <div className="flex min-h-0 flex-1">
-            <IssueListPanel
-              issues={filtered}
-              tab={listTab}
-              onTabChange={setListTab}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-            />
-            <IssueDetailPanel
-              issue={selected}
-              disabled={mutating}
-              onWorkflowChange={handleWorkflowChange}
-              onComplete={handleComplete}
-              onRecall={handleRecall}
-            />
-          </div>
         ) : (
-          <div className="flex min-h-0 flex-1">
-            <div className="flex min-w-0 flex-1 flex-col">
-              <CalendarView
-                issues={filtered}
-                month={calendarMonth}
-                onMonthChange={setCalendarMonth}
-                calendarMode={calendarMode}
-                onCalendarModeChange={setCalendarMode}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-              />
-            </div>
-            {selected ? (
-              <div className="w-[400px] shrink-0 border-l border-zinc-200">
+          <>
+            {/* Mobile full-screen detail */}
+            {showMobileDetail ? (
+              <div className="fixed inset-0 z-50 flex flex-col lg:hidden">
                 <IssueDetailPanel
-                  issue={selected}
-                  disabled={mutating}
-                  onWorkflowChange={handleWorkflowChange}
-                  onComplete={handleComplete}
-                  onRecall={handleRecall}
+                  {...detailProps}
+                  variant="mobile"
+                  onBack={() => setSelectedId(null)}
                 />
               </div>
             ) : null}
-          </div>
+
+            {view === "list" ? (
+              <div className="flex min-h-0 flex-1">
+                <IssueListPanel
+                  issues={filtered}
+                  tab={listTab}
+                  onTabChange={setListTab}
+                  selectedId={selectedId}
+                  onSelect={selectIssue}
+                  className={showMobileDetail ? "hidden lg:flex" : "flex"}
+                />
+                <div className="hidden min-w-0 flex-1 lg:flex">
+                  <IssueDetailPanel {...detailProps} variant="desktop" />
+                </div>
+              </div>
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  <CalendarView
+                    issues={filtered}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
+                    calendarMode={calendarMode}
+                    onCalendarModeChange={setCalendarMode}
+                    selectedId={selectedId}
+                    onSelect={selectIssue}
+                  />
+                </div>
+                {selected ? (
+                  <div className="hidden w-[400px] shrink-0 border-l border-zinc-200 lg:block">
+                    <IssueDetailPanel {...detailProps} variant="desktop" />
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      <MobileBottomNav
+        view={view}
+        onViewChange={(v) => {
+          setView(v);
+          setSelectedId(null);
+        }}
+      />
     </div>
   );
 }

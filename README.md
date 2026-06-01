@@ -47,10 +47,14 @@ New submissions appear on the dashboard **immediately** via Supabase Realtime.
 ## Deploy (Vercel)
 
 ```bash
-npx vercel
+npx vercel --prod
 ```
 
 Link the GitHub repo and set all env vars above for Production.
+
+## iOS / TestFlight
+
+See **[ios/TESTFLIGHT.md](ios/TESTFLIGHT.md)**. Open `ios/FacilitiesChecklist.xcodeproj`, set your Apple Team, update `ios/Config/Release.xcconfig` with your Vercel URL, then **Product → Archive** → upload to TestFlight.
 
 ## GitHub
 

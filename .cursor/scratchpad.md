@@ -269,6 +269,8 @@ Reference: MaintainX Work Orders — list + detail split, filter bar, status pil
 
 **2026-06-01 — Executor:** MaintainX-style manager UI at `/lead` — list split view (To Do / Done, cards, detail pane), status row (Open / On Hold / In Progress / Done), filters, search, calendar tab (month/week). Staff `/submit` form styled to match. Mock data until Supabase wired.
 
+**2026-06-01 — Executor:** Supabase submit + Realtime dashboard wired. Pushed to https://github.com/Derekonpar/FacilitiesChecklist. User must run SQL migrations + set Vercel env vars for production.
+
 ---
 
 ## Executor's Feedback or Assistance Requests

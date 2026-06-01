@@ -19,7 +19,7 @@ export function FilterBar({
   onPriorityChange,
 }: FilterBarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 bg-white px-4 py-2">
+    <div className="flex flex-nowrap items-center gap-2 overflow-x-auto border-b border-zinc-200 bg-white px-4 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <FilterChip
         label="Department"
         value={

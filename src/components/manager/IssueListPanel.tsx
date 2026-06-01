@@ -15,6 +15,7 @@ type IssueListPanelProps = {
   onTabChange: (tab: ListTab) => void;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  className?: string;
 };
 
 export function IssueListPanel({
@@ -23,6 +24,7 @@ export function IssueListPanel({
   onTabChange,
   selectedId,
   onSelect,
+  className,
 }: IssueListPanelProps) {
   const filtered =
     tab === "todo"
@@ -30,7 +32,12 @@ export function IssueListPanel({
       : issues.filter((i) => i.status === "completed");
 
   return (
-    <div className="flex w-[340px] shrink-0 flex-col border-r border-zinc-200 bg-[#fafafa]">
+    <div
+      className={cn(
+        "w-full shrink-0 flex-col border-r border-zinc-200 bg-[#fafafa] lg:w-[340px]",
+        className ?? "flex",
+      )}
+    >
       <div className="flex border-b border-zinc-200 bg-white">
         <TabBtn active={tab === "todo"} onClick={() => onTabChange("todo")}>
           To Do
@@ -99,10 +106,10 @@ function IssueCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "mb-2 flex w-full gap-3 rounded-xl border bg-white p-3 text-left transition",
+        "mb-2 flex w-full gap-3 rounded-2xl border bg-white p-3.5 text-left shadow-sm transition active:scale-[0.99]",
         selected
-          ? "border-[#1a73e8] ring-1 ring-[#1a73e8]/30"
-          : "border-zinc-200 hover:border-zinc-300",
+          ? "border-[#1a73e8] ring-2 ring-[#1a73e8]/20"
+          : "border-zinc-200/80 hover:border-zinc-300",
       )}
     >
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-100">

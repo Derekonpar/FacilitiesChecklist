@@ -6,7 +6,8 @@ import { Suspense, useRef, useState } from "react";
 import { ArrowLeft, Camera, AlertTriangle, Loader2 } from "lucide-react";
 import { DEPARTMENTS, PRIORITIES, VENUE_NAME } from "@/lib/constants";
 import type { DepartmentId, PriorityId } from "@/lib/constants";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/utils";
 
 function SubmitForm() {
@@ -91,26 +92,29 @@ function SubmitForm() {
     }
   }
 
+  const fieldClass =
+    "mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3.5 text-base outline-none focus:border-[#1a73e8] focus:bg-white focus:ring-2 focus:ring-[#1a73e8]/20";
+
   if (submitted) {
     return (
-      <div className="mx-auto max-w-lg px-6 py-16 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+      <div className="surface-card mx-auto max-w-lg p-8 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-teal-100 text-2xl text-teal-600">
           ✓
         </div>
-        <h2 className="mt-4 text-xl font-semibold">Issue submitted</h2>
-        <p className="mt-2 text-zinc-600">
+        <h2 className="mt-4 text-xl font-bold text-zinc-900">Issue submitted</h2>
+        <p className="mt-2 text-sm text-zinc-600">
           Managers will see it on the dashboard immediately.
         </p>
         <button
           type="button"
           onClick={() => setSubmitted(false)}
-          className="mt-6 rounded-lg bg-[#1a73e8] px-6 py-3 text-sm font-semibold text-white"
+          className="mt-6 w-full rounded-xl bg-[#1a73e8] py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#1a73e8]/20 active:scale-[0.98]"
         >
           Submit another
         </button>
         <Link
           href="/lead"
-          className="mt-4 block text-sm text-[#1a73e8] hover:underline"
+          className="mt-4 block text-sm font-medium text-[#1a73e8]"
         >
           Open manager dashboard
         </Link>
@@ -119,53 +123,51 @@ function SubmitForm() {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mx-auto max-w-lg px-4 py-8 pb-24"
-    >
+    <form onSubmit={handleSubmit} className="mx-auto max-w-lg pb-28">
       <Link
         href="/"
-        className="mb-6 inline-flex items-center gap-1 text-sm text-zinc-600 hover:text-zinc-900"
+        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-[#1a73e8]"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-5 w-5" />
         Back
       </Link>
 
-      <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-        {VENUE_NAME}
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold text-zinc-900">
-        Report an issue
-      </h1>
-      <p className="mt-2 text-sm text-zinc-600">
-        Time is recorded automatically when you submit.
-      </p>
-
-      {error ? (
-        <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
-          {error}
+      <div className="surface-card p-5 sm:p-6">
+        <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+          {VENUE_NAME}
         </p>
-      ) : null}
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900">
+          Report an issue
+        </h1>
+        <p className="mt-2 text-sm text-zinc-600">
+          Time is recorded automatically when you submit.
+        </p>
 
-      <label className="mt-8 block text-sm font-medium text-zinc-900">
+        {error ? (
+          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
+            {error}
+          </p>
+        ) : null}
+
+      <label className="mt-6 block text-sm font-semibold text-zinc-900">
         Your name <span className="text-red-500">*</span>
       </label>
       <input
         required
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="mt-1.5 w-full rounded-lg border border-zinc-300 px-4 py-3 text-base outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20"
+        className={fieldClass}
         placeholder="First name or initials"
       />
 
-      <label className="mt-6 block text-sm font-medium text-zinc-900">
+      <label className="mt-5 block text-sm font-semibold text-zinc-900">
         Department <span className="text-red-500">*</span>
       </label>
       <select
         required
         value={department}
         onChange={(e) => setDepartment(e.target.value as DepartmentId)}
-        className="mt-1.5 w-full rounded-lg border border-zinc-300 px-4 py-3 text-base outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20"
+        className={fieldClass}
       >
         <option value="" disabled>
           Select department…
@@ -177,7 +179,7 @@ function SubmitForm() {
         ))}
       </select>
 
-      <label className="mt-6 block text-sm font-medium text-zinc-900">
+      <label className="mt-5 block text-sm font-semibold text-zinc-900">
         Priority
       </label>
       <div className="mt-2 flex gap-2">
@@ -187,7 +189,7 @@ function SubmitForm() {
             type="button"
             onClick={() => setPriority(p.id)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-3 text-sm font-medium transition",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-3.5 text-sm font-semibold transition active:scale-[0.98]",
               priority === p.id
                 ? p.id === "urgent"
                   ? "border-red-500 bg-red-50 text-red-800"
@@ -203,7 +205,7 @@ function SubmitForm() {
         ))}
       </div>
 
-      <label className="mt-6 block text-sm font-medium text-zinc-900">
+      <label className="mt-5 block text-sm font-semibold text-zinc-900">
         What&apos;s the issue? <span className="text-red-500">*</span>
       </label>
       <textarea
@@ -212,11 +214,11 @@ function SubmitForm() {
         rows={4}
         value={comment}
         onChange={(e) => setComment(e.target.value)}
-        className="mt-1.5 w-full rounded-lg border border-zinc-300 px-4 py-3 text-base outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20"
+        className={fieldClass}
         placeholder="Describe the problem…"
       />
 
-      <label className="mt-6 block text-sm font-medium text-zinc-900">
+      <label className="mt-5 block text-sm font-semibold text-zinc-900">
         Photo (optional)
       </label>
       <input
@@ -230,7 +232,7 @@ function SubmitForm() {
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="mt-1.5 flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 py-8 text-zinc-600 hover:bg-zinc-100"
+        className="mt-1.5 flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 py-10 text-zinc-600 active:bg-zinc-100"
       >
         {photoPreview ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -246,13 +248,14 @@ function SubmitForm() {
           </>
         )}
       </button>
+      </div>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="fixed bottom-0 left-0 right-0 border-t border-zinc-200 bg-white p-4 sm:static sm:mt-8 sm:border-0 sm:bg-transparent sm:p-0"
-      >
-        <span className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1a73e8] py-4 text-base font-semibold text-white hover:bg-[#1557b0] disabled:opacity-60">
+      <div className="safe-bottom fixed bottom-0 left-0 right-0 border-t border-zinc-200/80 bg-white/95 p-4 backdrop-blur-md">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="mx-auto flex w-full max-w-lg items-center justify-center gap-2 rounded-xl bg-[#1a73e8] py-4 text-base font-semibold text-white shadow-lg shadow-[#1a73e8]/25 disabled:opacity-60 active:scale-[0.98]"
+        >
           {submitting ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -261,15 +264,15 @@ function SubmitForm() {
           ) : (
             "Submit issue"
           )}
-        </span>
-      </button>
+        </button>
+      </div>
     </form>
   );
 }
 
 export default function SubmitPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="mobile-shell min-h-[100dvh] px-4 py-6">
       <Suspense fallback={<div className="p-8 text-center">Loading…</div>}>
         <SubmitForm />
       </Suspense>

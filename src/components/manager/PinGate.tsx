@@ -49,7 +49,7 @@ export function PinGate({ children }: PinGateProps) {
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f4f5f7]">
+      <div className="mobile-shell flex min-h-[100dvh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-[#1a73e8]" />
       </div>
     );
@@ -58,16 +58,16 @@ export function PinGate({ children }: PinGateProps) {
   if (unlocked) return <>{children}</>;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#f4f5f7] px-6">
-      <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#1a73e8]/10 text-[#1a73e8]">
-          <Lock className="h-6 w-6" />
+    <div className="mobile-shell flex min-h-[100dvh] flex-col items-center justify-center px-6 safe-bottom">
+      <div className="surface-card w-full max-w-sm p-8">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1a73e8]/10 text-[#1a73e8]">
+          <Lock className="h-7 w-7" strokeWidth={1.75} />
         </div>
-        <h1 className="mt-4 text-center text-xl font-semibold text-zinc-900">
+        <h1 className="mt-5 text-center text-xl font-bold text-zinc-900">
           Manager access
         </h1>
-        <p className="mt-2 text-center text-sm text-zinc-500">
-          {VENUE_NAME} — shared manager PIN required to view and update issues
+        <p className="mt-2 text-center text-sm leading-relaxed text-zinc-500">
+          {VENUE_NAME} — enter the shared manager PIN to view and update issues
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <input
@@ -77,7 +77,7 @@ export function PinGate({ children }: PinGateProps) {
             placeholder="PIN"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-4 py-3 text-center text-lg tracking-widest outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20"
+            className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3.5 text-center text-lg tracking-[0.2em] outline-none focus:border-[#1a73e8] focus:bg-white focus:ring-2 focus:ring-[#1a73e8]/20"
           />
           {error ? (
             <p className="text-center text-sm text-red-600">{error}</p>
@@ -85,7 +85,7 @@ export function PinGate({ children }: PinGateProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-[#1a73e8] py-3 text-sm font-semibold text-white hover:bg-[#1557b0] disabled:opacity-60"
+            className="w-full rounded-xl bg-[#1a73e8] py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#1a73e8]/25 hover:bg-[#1557b0] disabled:opacity-60 active:scale-[0.98]"
           >
             {submitting ? "Checking…" : "Continue"}
           </button>

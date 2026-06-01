@@ -18,7 +18,7 @@ type SidebarProps = {
 
 export function Sidebar({ view, onViewChange }: SidebarProps) {
   return (
-    <aside className="flex w-14 shrink-0 flex-col items-center border-r border-zinc-200 bg-white py-3">
+    <aside className="hidden w-14 shrink-0 flex-col items-center border-r border-zinc-200 bg-white py-3 lg:flex">
       <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a73e8] text-xs font-bold text-white">
         OP
       </div>

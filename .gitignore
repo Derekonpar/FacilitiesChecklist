@@ -20,6 +20,12 @@
 # production
 /build
 
+# Xcode
+ios/build/
+*.xcuserstate
+xcuserdata/
+DerivedData/
+
 # misc
 .DS_Store
 *.pem

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { rowToIssue, sortIssues, type IssueRow } from "@/lib/issues/map";
 import type { Issue } from "@/lib/types/issue";
 
