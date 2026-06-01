@@ -65,6 +65,15 @@ extension WebViewCoordinator: WKNavigationDelegate {
 
     func webView(
         _ webView: WKWebView,
+        didCommit navigation: WKNavigation!
+    ) {
+        Task { @MainActor in
+            model?.updateNavigationState()
+        }
+    }
+
+    func webView(
+        _ webView: WKWebView,
         didFail navigation: WKNavigation!,
         withError error: Error
     ) {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -26,7 +26,9 @@ type SubmitDraft = {
 };
 
 function SubmitForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const successFromUrl = searchParams.get("success") === "1";
   const deptParam = searchParams.get("dept") as DepartmentId | null;
   const validDept = DEPARTMENTS.some((d) => d.id === deptParam)
     ? deptParam!
@@ -42,7 +44,7 @@ function SubmitForm() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(successFromUrl);
 
   const inAppShell =
     typeof navigator !== "undefined" &&
@@ -93,11 +95,23 @@ function SubmitForm() {
     setPhotoFile(file);
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoPreview(file ? URL.createObjectURL(file) : null);
+    if (file) setError(null);
   }
+
+  const formReady =
+    Boolean(department) &&
+    name.trim().length > 0 &&
+    comment.trim().length >= 3 &&
+    photoFile !== null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!department || !name.trim() || comment.trim().length < 3) return;
+
+    if (!photoFile) {
+      setError("A photo is required. Take a photo or choose one from your library.");
+      return;
+    }
 
     if (!isSupabaseConfigured()) {
       setError(
@@ -111,20 +125,16 @@ function SubmitForm() {
 
     try {
       const supabase = createClient();
-      let photo_path: string | null = null;
+      const ext = photoFile.name.split(".").pop() ?? "jpg";
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("issue-photos")
+        .upload(path, photoFile, { cacheControl: "3600", upsert: false });
 
-      if (photoFile) {
-        const ext = photoFile.name.split(".").pop() ?? "jpg";
-        const path = `${crypto.randomUUID()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from("issue-photos")
-          .upload(path, photoFile, { cacheControl: "3600", upsert: false });
-
-        if (uploadError) {
-          throw new Error(`Photo upload failed: ${uploadError.message}`);
-        }
-        photo_path = path;
+      if (uploadError) {
+        throw new Error(`Photo upload failed: ${uploadError.message}`);
       }
+      const photo_path = path;
 
       const { error: insertError } = await supabase.from("issues").insert({
         department,
@@ -140,8 +150,9 @@ function SubmitForm() {
         throw new Error(insertError.message);
       }
 
-      setSubmitted(true);
       sessionStorage.removeItem(SUBMIT_DRAFT_KEY);
+      router.replace("/submit?success=1");
+      setSubmitted(true);
       setName("");
       setComment("");
       setPriority("normal");
@@ -168,16 +179,25 @@ function SubmitForm() {
         <p className="mt-2 text-sm text-zinc-600">
           Managers will see it on the dashboard immediately.
         </p>
+        <Link
+          href="/"
+          className="mt-6 flex w-full items-center justify-center rounded-xl bg-[#1a73e8] py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#1a73e8]/20 active:scale-[0.98]"
+        >
+          Back to home
+        </Link>
         <button
           type="button"
-          onClick={() => setSubmitted(false)}
-          className="mt-6 w-full rounded-xl bg-[#1a73e8] py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#1a73e8]/20 active:scale-[0.98]"
+          onClick={() => {
+            setSubmitted(false);
+            router.replace("/submit");
+          }}
+          className="mt-3 w-full rounded-xl border border-zinc-200 bg-white py-3.5 text-sm font-semibold text-zinc-800 active:bg-zinc-50"
         >
           Submit another
         </button>
         <Link
           href="/lead"
-          className="mt-4 block text-sm font-medium text-[#1a73e8]"
+          className="mt-3 block text-sm font-medium text-[#1a73e8]"
         >
           Open manager dashboard
         </Link>
@@ -282,8 +302,11 @@ function SubmitForm() {
       />
 
       <label className="mt-5 block text-sm font-semibold text-zinc-900">
-        Photo (optional)
+        Photo <span className="text-red-500">*</span>
       </label>
+      <p className="mt-1 text-xs text-zinc-500">
+        Required — take a photo or choose one from your library.
+      </p>
       <input
         ref={cameraRef}
         type="file"
@@ -320,7 +343,12 @@ function SubmitForm() {
           </button>
         </div>
       ) : (
-        <div className="mt-2 grid grid-cols-2 gap-2">
+        <div
+          className={cn(
+            "mt-2 grid grid-cols-2 gap-2 rounded-xl",
+            error && !photoFile && "ring-2 ring-red-300 ring-offset-2",
+          )}
+        >
           <button
             type="button"
             onClick={openCameraPicker}
@@ -344,7 +372,7 @@ function SubmitForm() {
       <div className="safe-bottom fixed bottom-0 left-0 right-0 border-t border-zinc-200/80 bg-white/95 p-4 backdrop-blur-md">
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !formReady}
           className="mx-auto flex w-full max-w-lg items-center justify-center gap-2 rounded-xl bg-[#1a73e8] py-4 text-base font-semibold text-white shadow-lg shadow-[#1a73e8]/25 disabled:opacity-60 active:scale-[0.98]"
         >
           {submitting ? (

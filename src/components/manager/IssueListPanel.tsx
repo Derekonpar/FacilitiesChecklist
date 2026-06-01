@@ -1,9 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { ImageIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ImageIcon } from "lucide-react";
+import type { DepartmentId } from "@/lib/constants";
 import { getDepartmentLabel } from "@/lib/departments";
 import { formatRelativeTime, issueTitle } from "@/lib/format";
+import { groupIssuesByDepartment, isIssueStale } from "@/lib/issues";
 import type { Issue } from "@/lib/types/issue";
 import type { ListTab } from "@/lib/types/issue";
 import { cn } from "@/lib/utils";
@@ -31,6 +34,40 @@ export function IssueListPanel({
       ? issues.filter((i) => i.status === "open")
       : issues.filter((i) => i.status === "completed");
 
+  const grouped = useMemo(() => groupIssuesByDepartment(filtered), [filtered]);
+
+  /** Departments expanded to show issues — starts collapsed; not reset on realtime updates. */
+  const [expanded, setExpanded] = useState<Set<DepartmentId>>(() => new Set());
+
+  useEffect(() => {
+    setExpanded(new Set());
+  }, [tab]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const issue = issues.find((i) => i.id === selectedId);
+    if (issue) {
+      setExpanded((prev) => {
+        if (prev.has(issue.department)) return prev;
+        const next = new Set(prev);
+        next.add(issue.department);
+        return next;
+      });
+    }
+  }, [selectedId, issues]);
+
+  function toggleDepartment(id: DepartmentId) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const todoCount = issues.filter((i) => i.status === "open").length;
+  const doneCount = issues.filter((i) => i.status === "completed").length;
+
   return (
     <div
       className={cn(
@@ -41,26 +78,82 @@ export function IssueListPanel({
       <div className="flex border-b border-zinc-200 bg-white">
         <TabBtn active={tab === "todo"} onClick={() => onTabChange("todo")}>
           To Do
+          {todoCount > 0 ? (
+            <span className="ml-1.5 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-600">
+              {todoCount}
+            </span>
+          ) : null}
         </TabBtn>
         <TabBtn active={tab === "done"} onClick={() => onTabChange("done")}>
           Done
+          {doneCount > 0 ? (
+            <span className="ml-1.5 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-600">
+              {doneCount}
+            </span>
+          ) : null}
         </TabBtn>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
-        {filtered.length === 0 ? (
+        {grouped.length === 0 ? (
           <p className="p-4 text-center text-sm text-zinc-500">
             No issues in this tab.
           </p>
         ) : (
-          filtered.map((issue) => (
-            <IssueCard
-              key={issue.id}
-              issue={issue}
-              selected={selectedId === issue.id}
-              onSelect={() => onSelect(issue.id)}
-            />
-          ))
+          grouped.map(({ department, label, issues: deptIssues }) => {
+            const isOpen = expanded.has(department);
+            const staleInDept = deptIssues.filter((i) => isIssueStale(i)).length;
+
+            return (
+              <section key={department} className="mb-2">
+                <button
+                  type="button"
+                  onClick={() => toggleDepartment(department)}
+                  className="flex w-full items-center gap-2 rounded-xl bg-white px-3 py-2.5 text-left shadow-sm ring-1 ring-zinc-200/80 transition hover:bg-zinc-50 active:bg-zinc-100"
+                  aria-expanded={isOpen}
+                  aria-controls={`dept-issues-${department}`}
+                >
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-zinc-500 transition",
+                      isOpen ? "rotate-0" : "-rotate-90",
+                    )}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-900">
+                    {label}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-zinc-700">
+                    {deptIssues.length}
+                  </span>
+                  {staleInDept > 0 ? (
+                    <span
+                      className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800"
+                      title="Open more than a week"
+                    >
+                      {staleInDept} stale
+                    </span>
+                  ) : null}
+                </button>
+
+                {isOpen ? (
+                  <div
+                    id={`dept-issues-${department}`}
+                    className="mt-1 space-y-1 border-l-2 border-zinc-200 pl-2"
+                  >
+                    {deptIssues.map((issue) => (
+                      <IssueCard
+                        key={issue.id}
+                        issue={issue}
+                        selected={selectedId === issue.id}
+                        stale={isIssueStale(issue)}
+                        onSelect={() => onSelect(issue.id)}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+            );
+          })
         )}
       </div>
     </div>
@@ -81,7 +174,7 @@ function TabBtn({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex-1 border-b-2 py-3 text-sm font-medium transition",
+        "flex flex-1 items-center justify-center gap-0.5 border-b-2 py-3 text-sm font-medium transition",
         active
           ? "border-[#1a73e8] text-[#1a73e8]"
           : "border-transparent text-zinc-500 hover:text-zinc-800",
@@ -95,10 +188,12 @@ function TabBtn({
 function IssueCard({
   issue,
   selected,
+  stale,
   onSelect,
 }: {
   issue: Issue;
   selected: boolean;
+  stale?: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -106,10 +201,12 @@ function IssueCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "mb-2 flex w-full gap-3 rounded-2xl border bg-white p-3.5 text-left shadow-sm transition active:scale-[0.99]",
+        "flex w-full gap-3 rounded-2xl border bg-white p-3.5 text-left shadow-sm transition active:scale-[0.99]",
         selected
           ? "border-[#1a73e8] ring-2 ring-[#1a73e8]/20"
-          : "border-zinc-200/80 hover:border-zinc-300",
+          : stale
+            ? "border-amber-300 hover:border-amber-400"
+            : "border-zinc-200/80 hover:border-zinc-300",
       )}
     >
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
@@ -137,6 +234,11 @@ function IssueCard({
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <StatusBadge issue={issue} />
           <PriorityDot priority={issue.priority} />
+          {stale ? (
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
+              7+ days
+            </span>
+          ) : null}
         </div>
         <p className="mt-1 text-xs text-zinc-400">
           {formatRelativeTime(issue.created_at)}

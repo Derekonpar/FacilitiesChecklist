@@ -34,7 +34,7 @@ export default function HomePage() {
                 Report an issue
               </span>
               <span className="text-sm text-zinc-500">
-                Name, department, photo & urgent flag
+                Name, department, required photo & urgent flag
               </span>
             </span>
           </Link>

@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  CalendarDays,
-  ClipboardList,
-  LayoutGrid,
-  Plus,
-  Settings,
-} from "lucide-react";
+import { CalendarDays, ClipboardList, LayoutGrid, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { IssueView } from "@/lib/types/issue";
 
@@ -47,15 +41,7 @@ export function Sidebar({ view, onViewChange }: SidebarProps) {
         </Link>
       </nav>
 
-      <button
-        type="button"
-        className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100"
-        title="Settings (coming soon)"
-        disabled
-      >
-        <Settings className="h-5 w-5" />
-      </button>
-      <div className="mt-2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs font-medium text-zinc-600">
+      <div className="mt-auto flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs font-medium text-zinc-600">
         M
       </div>
     </aside>

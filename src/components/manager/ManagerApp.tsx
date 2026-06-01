@@ -2,14 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Wifi, WifiOff, Loader2 } from "lucide-react";
-import type { Issue } from "@/lib/types/issue";
-import type { IssueView, ListTab, WorkflowStatus } from "@/lib/types/issue";
-import type { DepartmentId, PriorityId } from "@/lib/constants";
+import { AlertTriangle, Plus, Search, Wifi, WifiOff, Loader2 } from "lucide-react";
+import type { WorkflowStatus } from "@/lib/types/issue";
 import { issueTitle } from "@/lib/format";
+import { countStaleIssues } from "@/lib/issues";
 import { useIssues } from "@/hooks/useIssues";
+import { useLeadNavigation } from "@/hooks/useLeadNavigation";
 import { Sidebar, ViewToggle } from "./Sidebar";
-import { FilterBar } from "./FilterBar";
 import { IssueListPanel } from "./IssueListPanel";
 import { IssueDetailPanel } from "./IssueDetailPanel";
 import { CalendarView } from "./CalendarView";
@@ -17,31 +16,27 @@ import { MobileBottomNav } from "./MobileBottomNav";
 
 export function ManagerApp() {
   const { issues, loading, error, refetch } = useIssues();
-  const [view, setView] = useState<IssueView>("list");
-  const [listTab, setListTab] = useState<ListTab>("todo");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { view, tab: listTab, issueId: selectedId, navigate, goBack } =
+    useLeadNavigation();
   const [search, setSearch] = useState("");
-  const [department, setDepartment] = useState<DepartmentId | "all">("all");
-  const [priority, setPriority] = useState<PriorityId | "all">("all");
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [calendarMode, setCalendarMode] = useState<"month" | "week">("month");
   const [mutating, setMutating] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return issues.filter((i) => {
-      if (department !== "all" && i.department !== department) return false;
-      if (priority !== "all" && i.priority !== priority) return false;
-      if (!q) return true;
-      return (
+    if (!q) return issues;
+    return issues.filter(
+      (i) =>
         issueTitle(i).toLowerCase().includes(q) ||
         i.comment.toLowerCase().includes(q) ||
         i.submitted_by.toLowerCase().includes(q) ||
         i.id.includes(q) ||
-        i.department.includes(q)
-      );
-    });
-  }, [issues, search, department, priority]);
+        i.department.includes(q),
+    );
+  }, [issues, search]);
+
+  const staleCount = useMemo(() => countStaleIssues(issues), [issues]);
 
   const selected = filtered.find((i) => i.id === selectedId) ?? null;
   const openCount = issues.filter((i) => i.status === "open").length;
@@ -71,7 +66,7 @@ export function ManagerApp() {
 
   async function handleWorkflowChange(id: string, workflow_status: WorkflowStatus) {
     const ok = await patchIssue(id, { action: "workflow", workflow_status });
-    if (ok) setListTab("todo");
+    if (ok) navigate({ tab: "todo", issueId: id });
   }
 
   async function handleComplete(id: string, note?: string) {
@@ -79,19 +74,28 @@ export function ManagerApp() {
       action: "complete",
       completion_note: note,
     });
-    if (ok) setListTab("done");
+    if (ok) navigate({ tab: "done", issueId: id });
   }
 
   async function handleRecall(id: string) {
     const ok = await patchIssue(id, { action: "recall" });
-    if (ok) {
-      setListTab("todo");
-      setSelectedId(id);
-    }
+    if (ok) navigate({ tab: "todo", issueId: id });
   }
 
   function selectIssue(id: string) {
-    setSelectedId(id);
+    navigate({ view, tab: listTab, issueId: id });
+  }
+
+  function closeIssueDetail() {
+    goBack();
+  }
+
+  function changeView(nextView: typeof view) {
+    navigate({ view: nextView, tab: listTab, issueId: null });
+  }
+
+  function changeTab(nextTab: typeof listTab) {
+    navigate({ view, tab: nextTab, issueId: null });
   }
 
   const detailProps = {
@@ -104,15 +108,14 @@ export function ManagerApp() {
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-[#f4f5f7]">
-      <Sidebar view={view} onViewChange={setView} />
+      <Sidebar view={view} onViewChange={changeView} />
 
       <div className="flex min-w-0 flex-1 flex-col pb-[72px] lg:pb-0">
-        {/* Header — hidden on mobile when viewing issue detail */}
         <header
           className={`shrink-0 border-b border-zinc-200 bg-white px-4 py-3 ${showMobileDetail ? "hidden lg:block" : ""}`}
         >
           <div className="flex flex-wrap items-center gap-3">
-            <ViewToggle view={view} onViewChange={setView} />
+            <ViewToggle view={view} onViewChange={changeView} />
             <div className="min-w-0 flex-1">
               <h1 className="text-xl font-bold tracking-tight text-zinc-900 lg:text-2xl lg:font-semibold">
                 Issues
@@ -160,7 +163,6 @@ export function ManagerApp() {
             </Link>
           </div>
 
-          {/* Mobile search */}
           <div className="relative mt-3 lg:hidden">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <input
@@ -188,14 +190,21 @@ export function ManagerApp() {
           </div>
         ) : null}
 
-        <div className={showMobileDetail ? "hidden lg:block" : ""}>
-          <FilterBar
-            department={department}
-            priority={priority}
-            onDepartmentChange={setDepartment}
-            onPriorityChange={setPriority}
-          />
-        </div>
+        {staleCount > 0 ? (
+          <div
+            className={`flex items-start gap-2 border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 ${showMobileDetail ? "hidden lg:flex" : "flex"}`}
+            role="status"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p>
+              <span className="font-semibold">
+                {staleCount} open {staleCount === 1 ? "issue has" : "issues have"}
+              </span>{" "}
+              been on the list for more than a week. Please review and close or
+              update them.
+            </p>
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="flex flex-1 items-center justify-center gap-2 text-zinc-500">
@@ -204,13 +213,12 @@ export function ManagerApp() {
           </div>
         ) : (
           <>
-            {/* Mobile full-screen detail */}
             {showMobileDetail ? (
               <div className="fixed inset-0 z-50 flex flex-col lg:hidden">
                 <IssueDetailPanel
                   {...detailProps}
                   variant="mobile"
-                  onBack={() => setSelectedId(null)}
+                  onBack={closeIssueDetail}
                 />
               </div>
             ) : null}
@@ -220,7 +228,7 @@ export function ManagerApp() {
                 <IssueListPanel
                   issues={filtered}
                   tab={listTab}
-                  onTabChange={setListTab}
+                  onTabChange={changeTab}
                   selectedId={selectedId}
                   onSelect={selectIssue}
                   className={showMobileDetail ? "hidden lg:flex" : "flex"}
@@ -255,10 +263,7 @@ export function ManagerApp() {
 
       <MobileBottomNav
         view={view}
-        onViewChange={(v) => {
-          setView(v);
-          setSelectedId(null);
-        }}
+        onViewChange={changeView}
       />
     </div>
   );
