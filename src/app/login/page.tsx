@@ -5,11 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
-  ALLOWED_EMAIL_LOCAL_PARTS,
+  AUTO_ADMIN_LOCAL_PARTS,
   allowedEmailsHint,
   isAllowedOnparEmail,
   parseLoginIdentifier,
 } from "@/lib/auth/allowlist";
+import {
+  isValidPin,
+  normalizePinInput,
+  pinValidationMessage,
+} from "@/lib/auth/pin";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -19,6 +24,9 @@ import {
 import { VENUE_NAME } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
+const pinInputClass =
+  "mt-1.5 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3.5 text-center text-2xl font-semibold tracking-[0.4em] outline-none focus:border-[#1a73e8] focus:bg-white focus:ring-2 focus:ring-[#1a73e8]/20";
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -27,8 +35,8 @@ function LoginForm() {
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState(
     accessError
@@ -56,9 +64,21 @@ function LoginForm() {
       router.refresh();
     } else {
       setMessage(
-        "Account ready. An admin must grant you Manager access before using the dashboard.",
+        "Account created. An admin must grant you access in Team permissions before you can use the dashboard.",
       );
     }
+  }
+
+  function validatePinFields(): boolean {
+    if (!isValidPin(pin)) {
+      setError(pinValidationMessage());
+      return false;
+    }
+    if (mode === "signup" && pin !== confirmPin) {
+      setError("PINs do not match.");
+      return false;
+    }
+    return true;
   }
 
   async function handleSignIn(e: React.FormEvent) {
@@ -74,10 +94,15 @@ function LoginForm() {
       return;
     }
 
+    if (!validatePinFields()) {
+      setSubmitting(false);
+      return;
+    }
+
     const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password: pin,
     });
 
     if (signInError) {
@@ -90,6 +115,19 @@ function LoginForm() {
     setSubmitting(false);
   }
 
+  async function canRegister(email: string): Promise<boolean> {
+    if (isAllowedOnparEmail(email)) return true;
+    try {
+      const res = await fetch(
+        `/api/auth/check-signup?email=${encodeURIComponent(email)}`,
+      );
+      const data = (await res.json()) as { allowed?: boolean };
+      return Boolean(data.allowed);
+    } catch {
+      return false;
+    }
+  }
+
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -97,22 +135,15 @@ function LoginForm() {
     setMessage("");
 
     const { email, username } = parseLoginIdentifier(identifier);
-    if (!isAllowedOnparEmail(email)) {
+    if (!(await canRegister(email))) {
       setError(
-        `Only these emails can register: ${allowedEmailsHint()}`,
+        "This email is not approved for sign-up. Ask an admin to add you under Team permissions.",
       );
       setSubmitting(false);
       return;
     }
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      setSubmitting(false);
-      return;
-    }
-
-    if (password !== confirm) {
-      setError("Passwords do not match.");
+    if (!validatePinFields()) {
       setSubmitting(false);
       return;
     }
@@ -120,7 +151,7 @@ function LoginForm() {
     const supabase = createClient();
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
-      password,
+      password: pin,
       options: {
         data: {
           display_name: displayName.trim() || username,
@@ -139,7 +170,7 @@ function LoginForm() {
       await afterAuthRedirect();
     } else {
       setMessage(
-        "Check your email to confirm your account, then sign in. If confirmation is disabled, try signing in now.",
+        "Check your email to confirm your account, then sign in. If confirmation is off in Supabase, try signing in now.",
       );
     }
     setSubmitting(false);
@@ -161,9 +192,7 @@ function LoginForm() {
           </p>
           <h1 className="mt-1 text-2xl font-bold text-zinc-900">Team sign in</h1>
           <p className="mt-2 text-sm text-zinc-600">
-            Use your On Par email or username (e.g.{" "}
-            <span className="font-medium">derek</span> or{" "}
-            <span className="font-medium">derek@onparbar.com</span>).
+            Use your On Par username or email, then your 4-digit PIN.
           </p>
 
           <div className="mt-5 flex rounded-lg border border-zinc-200 p-0.5">
@@ -239,29 +268,37 @@ function LoginForm() {
             ) : null}
 
             <label className="block text-sm font-semibold text-zinc-900">
-              Password
+              {mode === "signup" ? "Create a 4-digit PIN" : "4-digit PIN"}
               <input
                 required
                 type="password"
+                inputMode="numeric"
                 autoComplete={
                   mode === "signin" ? "current-password" : "new-password"
                 }
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={fieldClass}
+                maxLength={4}
+                placeholder="••••"
+                value={pin}
+                onChange={(e) => setPin(normalizePinInput(e.target.value))}
+                className={pinInputClass}
               />
             </label>
 
             {mode === "signup" ? (
               <label className="block text-sm font-semibold text-zinc-900">
-                Confirm password
+                Confirm 4-digit PIN
                 <input
                   required
                   type="password"
+                  inputMode="numeric"
                   autoComplete="new-password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  className={fieldClass}
+                  maxLength={4}
+                  placeholder="••••"
+                  value={confirmPin}
+                  onChange={(e) =>
+                    setConfirmPin(normalizePinInput(e.target.value))
+                  }
+                  className={pinInputClass}
                 />
               </label>
             ) : null}
@@ -285,8 +322,8 @@ function LoginForm() {
           </form>
 
           <p className="mt-5 text-xs leading-relaxed text-zinc-500">
-            Allowed accounts:{" "}
-            {ALLOWED_EMAIL_LOCAL_PARTS.map((p) => (
+            Core team (admin on sign-up):{" "}
+            {AUTO_ADMIN_LOCAL_PARTS.map((p) => (
               <span key={p} className="font-medium text-zinc-700">
                 {p}@onparbar.com{" "}
               </span>

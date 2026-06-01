@@ -22,6 +22,9 @@ function TeamAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [newLocalPart, setNewLocalPart] = useState("");
+  const [allowMsg, setAllowMsg] = useState<string | null>(null);
+  const [allowing, setAllowing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,6 +44,28 @@ function TeamAdmin() {
   useEffect(() => {
     if (profile && canManageTeam(profile.role)) load();
   }, [profile, load]);
+
+  async function allowNewSignup(e: React.FormEvent) {
+    e.preventDefault();
+    setAllowing(true);
+    setAllowMsg(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/allowlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ local_part: newLocalPart }),
+      });
+      const data = (await res.json()) as { message?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Could not add");
+      setAllowMsg(data.message ?? "Added.");
+      setNewLocalPart("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add");
+    } finally {
+      setAllowing(false);
+    }
+  }
 
   async function updateRole(userId: string, role: UserRole) {
     setSavingId(userId);
@@ -84,11 +109,42 @@ function TeamAdmin() {
         </Link>
         <h1 className="mt-2 text-xl font-bold text-zinc-900">Team permissions</h1>
         <p className="text-sm text-zinc-600">
-          Grant or revoke manager access for On Par accounts.
+          Core team are admins automatically. Add new emails here, then set their
+          role after they create an account.
         </p>
       </header>
 
       <div className="p-4">
+        <form
+          onSubmit={allowNewSignup}
+          className="mb-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"
+        >
+          <h2 className="text-sm font-semibold text-zinc-900">
+            Allow a new sign-up
+          </h2>
+          <p className="mt-1 text-xs text-zinc-500">
+            They use username@onparbar.com and create a 4-digit PIN at /login.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <input
+              value={newLocalPart}
+              onChange={(e) => setNewLocalPart(e.target.value.toLowerCase())}
+              placeholder="newperson"
+              className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
+            />
+            <span className="self-center text-sm text-zinc-500">@onparbar.com</span>
+            <button
+              type="submit"
+              disabled={allowing || !newLocalPart.trim()}
+              className="rounded-lg bg-[#1a73e8] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {allowing ? "Adding…" : "Allow"}
+            </button>
+          </div>
+          {allowMsg ? (
+            <p className="mt-2 text-xs text-teal-700">{allowMsg}</p>
+          ) : null}
+        </form>
         {error ? (
           <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
             {error}

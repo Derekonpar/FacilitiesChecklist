@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Create derek@onparbar.com as admin (skips email confirmation).
- * Set DEREK_INITIAL_PASSWORD in .env first (min 8 chars).
+ * Set DEREK_INITIAL_PIN=1234 in .env (exactly 4 digits).
  */
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
@@ -23,7 +23,7 @@ loadEnv();
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const password = process.env.DEREK_INITIAL_PASSWORD?.trim();
+const pin = process.env.DEREK_INITIAL_PIN?.trim();
 const email = "derek@onparbar.com";
 
 if (!url || !serviceKey) {
@@ -31,8 +31,8 @@ if (!url || !serviceKey) {
   process.exit(1);
 }
 
-if (!password || password.length < 8) {
-  console.error("Add DEREK_INITIAL_PASSWORD=yourpassword (8+ chars) to .env, then re-run.");
+if (!/^\d{4}$/.test(pin ?? "")) {
+  console.error("Add DEREK_INITIAL_PIN=1234 (exactly 4 digits) to .env, then re-run.");
   process.exit(1);
 }
 
@@ -58,7 +58,7 @@ if (existing) {
 
 const { data, error } = await supabase.auth.admin.createUser({
   email,
-  password,
+  password: pin,
   email_confirm: true,
   user_metadata: { display_name: "Derek", username: "derek" },
 });
@@ -69,5 +69,5 @@ if (error) {
 }
 
 console.log("Created derek@onparbar.com as admin.");
-console.log("Sign in at /login with that email and DEREK_INITIAL_PASSWORD from .env");
+console.log("Sign in at /login with that email and your 4-digit PIN.");
 console.log("User id:", data.user?.id);
