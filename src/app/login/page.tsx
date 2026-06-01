@@ -54,7 +54,7 @@ function LoginForm() {
     let cancelled = false;
 
     (async () => {
-      const role = await fetchProfileRole();
+      const role = await ensureProfileAndGetRole();
       if (cancelled) return;
       if (role && canAccessManagerDashboard(role)) {
         router.replace(next);
@@ -69,7 +69,13 @@ function LoginForm() {
     };
   }, [next, router]);
 
-  async function fetchProfileRole(): Promise<UserRole | null> {
+  async function ensureProfileAndGetRole(): Promise<UserRole | null> {
+    try {
+      await fetch("/api/auth/complete-signup", { method: "POST" });
+    } catch {
+      /* offline or old deploy */
+    }
+
     for (let attempt = 0; attempt < 8; attempt++) {
       try {
         const res = await fetch("/api/auth/profile", { cache: "no-store" });
@@ -92,7 +98,7 @@ function LoginForm() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const role = await fetchProfileRole();
+    const role = await ensureProfileAndGetRole();
 
     if (role && canAccessManagerDashboard(role)) {
       router.replace(next);
@@ -200,7 +206,7 @@ function LoginForm() {
 
     if (signUpError) {
       const msg = signUpError.message.includes("Database error")
-        ? "Account could not be created (server setup). Ask an admin to run the latest database fix in Supabase, then try again."
+        ? "Sign-up is still blocked in the database. Your admin needs to run the short SQL fix (npm run apply:signup-fix), push the latest app to Vercel, then try Create account again."
         : signUpError.message;
       setError(msg);
       setSubmitting(false);
@@ -208,11 +214,6 @@ function LoginForm() {
     }
 
     if (data.session) {
-      try {
-        await fetch("/api/auth/complete-signup", { method: "POST" });
-      } catch {
-        /* trigger may have created profile */
-      }
       await afterAuthRedirect("signup");
     } else {
       setMessage(

@@ -37,25 +37,10 @@ export async function POST() {
     return NextResponse.json({ profile: existing, created: false });
   }
 
-  const localPart = email.split("@")[0] ?? "user";
-  let role: UserRole = "pending";
-
-  try {
-    const service = createServiceClient();
-    const { data: allowRow } = await service
-      .from("signup_allowlist")
-      .select("auto_admin")
-      .eq("local_part", localPart)
-      .maybeSingle();
-
-    if (allowRow?.auto_admin) {
-      role = "admin";
-    } else if (isAutoAdminEmail(email)) {
-      role = "admin";
-    }
-  } catch {
-    if (isAutoAdminEmail(email)) role = "admin";
-  }
+  const metaUsername = (user.user_metadata?.username as string | undefined)
+    ?.trim()
+    .toLowerCase();
+  const localPart = metaUsername || email.split("@")[0] || "user";
 
   let service;
   try {
@@ -65,6 +50,17 @@ export async function POST() {
       { error: e instanceof Error ? e.message : "Server misconfigured" },
       { status: 500 },
     );
+  }
+
+  let role: UserRole = "pending";
+  const { data: allowRow } = await service
+    .from("signup_allowlist")
+    .select("auto_admin")
+    .eq("local_part", localPart)
+    .maybeSingle();
+
+  if (allowRow?.auto_admin || isAutoAdminEmail(email)) {
+    role = "admin";
   }
 
   const displayName =

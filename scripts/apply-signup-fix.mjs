@@ -5,16 +5,19 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const sql = readFileSync(
-  resolve(__dirname, "../supabase/migrations/008_fix_signup_profile_trigger.sql"),
+  resolve(__dirname, "../supabase/migrations/009_drop_auth_profile_trigger.sql"),
   "utf8",
 );
 
 console.log(
-  "Daniel's sign-up error is fixed by running this SQL in Supabase → SQL Editor:\n",
+  "Run this in Supabase → SQL Editor (fixes Daniel sign-up + auto-admin):\n",
 );
 console.log("---");
 console.log(sql);
 console.log("---");
 console.log(
-  "\nAfter Run succeeds, have Daniel try Create account again at /login.",
+  "\nThen deploy the latest app to Vercel (git push) so sign-up can finish creating the profile.",
+);
+console.log(
+  "After deploy, Daniel uses Create account at /login with daniel@onparbar.com + 6-digit PIN.",
 );
