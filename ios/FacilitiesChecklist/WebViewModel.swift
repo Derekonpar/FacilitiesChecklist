@@ -14,6 +14,7 @@ final class WebViewModel: ObservableObject {
 
     init() {
         let config = WKWebViewConfiguration()
+        config.applicationNameForUserAgent = "FacilitiesChecklist/1.0"
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         config.preferences.javaScriptCanOpenWindowsAutomatically = true
         config.allowsInlineMediaPlayback = true

@@ -1,2 +1,1 @@
-// Production web app URL — update after Vercel deploy (no trailing slash)
-WEB_APP_URL = https:/$()/facilities-checklist.vercel.app
+#include "Shared.xcconfig"

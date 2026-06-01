@@ -2,13 +2,28 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useRef, useState } from "react";
-import { ArrowLeft, Camera, AlertTriangle, Loader2 } from "lucide-react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  Camera,
+  AlertTriangle,
+  Loader2,
+  ImageIcon,
+} from "lucide-react";
 import { DEPARTMENTS, PRIORITIES, VENUE_NAME } from "@/lib/constants";
 import type { DepartmentId, PriorityId } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/utils";
+
+const SUBMIT_DRAFT_KEY = "facilities-submit-draft";
+
+type SubmitDraft = {
+  name: string;
+  comment: string;
+  department: string;
+  priority: PriorityId;
+};
 
 function SubmitForm() {
   const searchParams = useSearchParams();
@@ -17,7 +32,8 @@ function SubmitForm() {
     ? deptParam!
     : "";
 
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const libraryRef = useRef<HTMLInputElement>(null);
   const [department, setDepartment] = useState<DepartmentId | "">(validDept);
   const [name, setName] = useState("");
   const [comment, setComment] = useState("");
@@ -27,6 +43,51 @@ function SubmitForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  const inAppShell =
+    typeof navigator !== "undefined" &&
+    navigator.userAgent.includes("FacilitiesChecklist");
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SUBMIT_DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as SubmitDraft;
+      if (draft.name) setName(draft.name);
+      if (draft.comment) setComment(draft.comment);
+      if (draft.department && DEPARTMENTS.some((d) => d.id === draft.department)) {
+        setDepartment(draft.department as DepartmentId);
+      }
+      if (draft.priority) setPriority(draft.priority);
+      sessionStorage.removeItem(SUBMIT_DRAFT_KEY);
+    } catch {
+      sessionStorage.removeItem(SUBMIT_DRAFT_KEY);
+    }
+  }, []);
+
+  function persistDraft() {
+    try {
+      const draft: SubmitDraft = {
+        name,
+        comment,
+        department,
+        priority,
+      };
+      sessionStorage.setItem(SUBMIT_DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* ignore quota errors */
+    }
+  }
+
+  function openCameraPicker() {
+    persistDraft();
+    cameraRef.current?.click();
+  }
+
+  function openLibraryPicker() {
+    persistDraft();
+    libraryRef.current?.click();
+  }
 
   function onPhotoChange(file: File | null) {
     setPhotoFile(file);
@@ -40,7 +101,7 @@ function SubmitForm() {
 
     if (!isSupabaseConfigured()) {
       setError(
-        "Database is not connected yet. Ask your admin to add Supabase keys to Vercel.",
+        "Unable to connect right now. Please try again later or contact your manager.",
       );
       return;
     }
@@ -80,11 +141,13 @@ function SubmitForm() {
       }
 
       setSubmitted(true);
+      sessionStorage.removeItem(SUBMIT_DRAFT_KEY);
       setName("");
       setComment("");
       setPriority("normal");
       onPhotoChange(null);
-      if (fileRef.current) fileRef.current.value = "";
+      if (cameraRef.current) cameraRef.current.value = "";
+      if (libraryRef.current) libraryRef.current.value = "";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not submit issue");
     } finally {
@@ -222,32 +285,60 @@ function SubmitForm() {
         Photo (optional)
       </label>
       <input
-        ref={fileRef}
+        ref={cameraRef}
         type="file"
         accept="image/*"
-        capture="environment"
+        {...(!inAppShell ? { capture: "environment" as const } : {})}
         className="hidden"
         onChange={(e) => onPhotoChange(e.target.files?.[0] ?? null)}
       />
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        className="mt-1.5 flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 py-10 text-zinc-600 active:bg-zinc-100"
-      >
-        {photoPreview ? (
-          // eslint-disable-next-line @next/next/no-img-element
+      <input
+        ref={libraryRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => onPhotoChange(e.target.files?.[0] ?? null)}
+      />
+      {photoPreview ? (
+        <div className="mt-2 overflow-hidden rounded-xl border border-zinc-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={photoPreview}
             alt="Preview"
-            className="max-h-40 rounded-lg object-contain"
+            className="max-h-48 w-full object-contain bg-zinc-100"
           />
-        ) : (
-          <>
-            <Camera className="h-5 w-5" />
-            Take or upload photo
-          </>
-        )}
-      </button>
+          <button
+            type="button"
+            onClick={() => {
+              onPhotoChange(null);
+              if (cameraRef.current) cameraRef.current.value = "";
+              if (libraryRef.current) libraryRef.current.value = "";
+            }}
+            className="w-full border-t border-zinc-200 py-2.5 text-sm font-medium text-red-600"
+          >
+            Remove photo
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={openCameraPicker}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-6 text-sm font-semibold text-zinc-800 active:bg-zinc-50"
+          >
+            <Camera className="h-6 w-6 text-[#1a73e8]" />
+            Take photo
+          </button>
+          <button
+            type="button"
+            onClick={openLibraryPicker}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-6 text-sm font-semibold text-zinc-800 active:bg-zinc-50"
+          >
+            <ImageIcon className="h-6 w-6 text-[#1a73e8]" />
+            Photo library
+          </button>
+        </div>
+      )}
       </div>
 
       <div className="safe-bottom fixed bottom-0 left-0 right-0 border-t border-zinc-200/80 bg-white/95 p-4 backdrop-blur-md">

@@ -1,37 +1,65 @@
 # TestFlight — FacilitiesChecklist iOS
 
-Native shell app that loads your **Vercel** web app (submit issues + manager dashboard).
+Native shell app that loads your live web app:
+
+**https://facilities-checklist.vercel.app**
 
 ## Before you archive
 
-### 1. Deploy the web app to Vercel
+### 1. Production website (Vercel) — already live?
 
-From the repo root:
+Your app URL is already set. Open it in Safari on your phone:
+
+**https://facilities-checklist.vercel.app**
+
+- If **submit** and **manager login** work there, you do **not** need `npx vercel --prod` right now.
+- If something fails (blank page, Supabase errors), fix **Vercel env vars** (step 2 below), then redeploy.
+
+#### What is `npx vercel --prod`? (only when you change code)
+
+That command uploads a **new build** from your Mac to Vercel **production**. Use it when:
+
+- You changed the Next.js app on your computer and want those changes live, **or**
+- You never connected GitHub and need a first deploy from the terminal.
+
+**You usually skip it** if:
+
+- The site already works at https://facilities-checklist.vercel.app, and  
+- You deploy by **pushing to GitHub** (Vercel auto-deploys on push).
+
+From the repo root, if you do need a manual deploy:
 
 ```bash
+cd /Users/derekpethel/Desktop/FacilitiesChecklist
 npx vercel --prod
 ```
 
-In Vercel → **Settings → Environment Variables**, add the same values as `.env`:
+(Log in to Vercel if prompted. This updates production to match your local folder.)
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or anon key)
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `MANAGER_PIN`
+### 2. Vercel environment variables (important)
 
-Copy your production URL (e.g. `https://facilities-checklist-xxx.vercel.app`).
+In [Vercel Dashboard](https://vercel.com) → your **facilities-checklist** project → **Settings → Environment Variables**, set for **Production**:
 
-### 2. Point the iOS app at production
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public key (or anon key) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Manager complete/recall (server only) |
+| `MANAGER_PIN` | Shared manager PIN |
 
-Edit **`ios/Config/Release.xcconfig`**:
+After adding or changing vars, click **Redeploy** on the latest deployment (or run `npx vercel --prod` once).
+
+### 3. iOS app URL — already configured
+
+**`ios/Config/Release.xcconfig`** is set to:
 
 ```
-WEB_APP_URL = https:/$()/YOUR-ACTUAL-VERCEL-URL.vercel.app
+WEB_APP_URL = https:/$()/facilities-checklist.vercel.app
 ```
 
-(No trailing slash. Keep the `/$()/` — it escapes `//` in xcconfig files.)
+Rebuild/archive in Xcode after any change to this file. (Keep `/$()/` — it escapes `//` in xcconfig files.)
 
-### 3. App icon (required for App Store Connect)
+### 4. App icon (required for App Store Connect)
 
 In Xcode: **FacilitiesChecklist → Assets → AppIcon** → drag a **1024×1024** PNG.
 
@@ -39,14 +67,10 @@ In Xcode: **FacilitiesChecklist → Assets → AppIcon** → drag a **1024×1024
 
 ## Xcode setup (one time)
 
-1. Open **`ios/FacilitiesChecklist.xcodeproj`** in Xcode.
-2. Select the **FacilitiesChecklist** target → **Signing & Capabilities**.
-3. Set **Team** to your Apple Developer team.
-4. Confirm **Bundle Identifier**: `com.onparentertainment.facilitieschecklist`  
-   (Change it if this ID is already taken in your account.)
-5. Run on a **physical iPhone** once to verify it loads your Vercel URL.
-
-> If you already created a separate Xcode project named FacilitiesChecklist, you can delete it and use this one in the repo, or drag the Swift files from `ios/FacilitiesChecklist/` into your project.
+1. Open **`ios/FacilitiesChecklist.xcodeproj`** (inside the **`ios`** folder on Desktop).
+2. **FacilitiesChecklist** target → **Signing & Capabilities** → set **Team**.
+3. Bundle ID: `com.onparentertainment.facilitieschecklist` (change if taken).
+4. Run on your **iPhone** once — you should see the same site as in Safari.
 
 ---
 
@@ -54,41 +78,58 @@ In Xcode: **FacilitiesChecklist → Assets → AppIcon** → drag a **1024×1024
 
 1. [App Store Connect](https://appstoreconnect.apple.com) → **Apps** → **+** → **New App**.
 2. **Platform:** iOS  
-3. **Name:** On Par Facilities (or Facilities Checklist)  
-4. **Bundle ID:** same as Xcode (`com.onparentertainment.facilitieschecklist`)  
-5. **SKU:** `facilities-checklist` (any unique string)
+3. **Name:** On Par Facilities  
+4. **Bundle ID:** `com.onparentertainment.facilitieschecklist`  
+5. **SKU:** `facilities-checklist`
 
 ---
 
 ## Upload to TestFlight
 
-### In Xcode (recommended)
-
-1. Select destination **Any iOS Device (arm64)** (not Simulator).
+1. In Xcode, destination: **Any iOS Device (arm64)**.
 2. **Product → Archive**.
-3. When Organizer opens: **Distribute App** → **App Store Connect** → **Upload**.
-4. Answer export compliance: **No** (we set `ITSAppUsesNonExemptEncryption = false` in Info.plist).
+3. **Distribute App** → **App Store Connect** → **Upload**.
+4. Export compliance: **No** (standard HTTPS only).
 
-### Wait for processing
-
-App Store Connect → your app → **TestFlight**. Processing usually takes **5–30 minutes**.
+Processing in TestFlight: about **5–30 minutes**.
 
 ---
 
-## Invite coworkers
+## Internal only (your team — not public)
 
-### Internal testing (fastest, up to 100 people)
+**Important:** **Distribute App → App Store Connect → Upload** only sends the build to Apple’s servers. It does **not** put the app on the public App Store. Nobody can download it from the App Store unless you later submit for **App Store Review** and **release** it yourself.
 
-1. TestFlight → **Internal Testing** → create a group.
-2. Add testers by Apple ID email (they must be in your App Store Connect **Users and Access** team, or use internal group rules).
+For **coworkers only**, use **Internal Testing** only:
 
-### External testing (any email, needs brief Beta review)
+### After upload (App Store Connect)
 
-1. **External Testing** → new group → add builds.
-2. Submit for Beta App Review (first time only).
-3. Share the **public link** or invite by email.
+1. Go to [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → your app → **TestFlight**.
+2. Wait until the build shows **Ready to Test** (not “Processing”).
+3. Open the **Internal Testing** section (left sidebar under TestFlight).
+4. Create or use the default group **“App Store Connect Users”** (or a custom internal group).
+5. Click **+** next to **Testers** and add people by email.
 
-Coworkers install the **TestFlight** app from the App Store, accept the invite, then install **On Par Facilities**.
+### Who can be internal testers?
+
+- They must be invited under **Users and Access** in App Store Connect with a role (e.g. Developer, Marketing, Admin), **or**
+- They appear automatically if they’re already on your App Store Connect team.
+
+Internal testing allows up to **100** testers. No public App Store listing. No “anyone with a link” unless you turn on **External Testing** (don’t use that if you want team-only).
+
+### What to avoid (stays private)
+
+| Don’t do this | Why |
+|---------------|-----|
+| **External Testing** + public link | Anyone with the link can join (after beta review) |
+| **App Store** tab → **Add for Review** / **Release** | That’s the real public launch |
+
+### Coworker steps
+
+1. Install **TestFlight** from the App Store on their iPhone.
+2. They get an **email invite** (or see the app in TestFlight if they’re on your team).
+3. Accept → install **On Par Facilities**.
+
+No App Store search. No public listing.
 
 ---
 
@@ -96,23 +137,7 @@ Coworkers install the **TestFlight** app from the App Store, accept the invite, 
 
 | Problem | Fix |
 |--------|-----|
-| White screen | Wrong `WEB_APP_URL` in Release.xcconfig; deploy Vercel first |
-| Can’t sign in / submit on device | Vercel env vars missing; check Supabase RLS migrations |
-| Archive fails signing | Set Development Team in Signing & Capabilities |
-| “Missing compliance” | In App Store Connect, set encryption to **No** for standard HTTPS-only app |
-
-## Command-line archive (optional)
-
-```bash
-cd ios
-xcodebuild -scheme FacilitiesChecklist -configuration Release \
-  -archivePath build/FacilitiesChecklist.xcarchive archive \
-  DEVELOPMENT_TEAM=YOUR_TEAM_ID
-
-xcodebuild -exportArchive \
-  -archivePath build/FacilitiesChecklist.xcarchive \
-  -exportOptionsPlist ExportOptions.plist \
-  -exportPath build/export
-```
-
-Then upload `build/export/FacilitiesChecklist.ipa` with **Transporter** or Xcode Organizer.
+| White screen in iOS app | Confirm https://facilities-checklist.vercel.app works in Safari |
+| Submit works on web, not app | Same URL — clear app and reinstall; check Release build |
+| Manager can’t complete issues | Add `SUPABASE_SERVICE_ROLE_KEY` on Vercel, redeploy |
+| Archive signing error | Set **Team** under Signing & Capabilities |

@@ -1,2 +1,5 @@
-// Local dev (Simulator can use localhost; device use your Mac IP)
-WEB_APP_URL = http:/$()/localhost:3000
+#include "Shared.xcconfig"
+
+// For Simulator-only local dev, copy Local.xcconfig.example → Local.xcconfig (gitignored)
+// and uncomment the include below.
+// #include? "Local.xcconfig"

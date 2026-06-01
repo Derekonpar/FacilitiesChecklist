@@ -4,28 +4,38 @@ import WebKit
 struct ContentView: View {
     @StateObject private var model = WebViewModel()
     @State private var coordinator: WebViewCoordinator?
+    @State private var didLoadInitially = false
 
     var body: some View {
         ZStack {
-            WebViewRepresentable(model: model, coordinator: $coordinator)
-                .ignoresSafeArea(edges: .bottom)
+            WebViewRepresentable(
+                model: model,
+                coordinator: $coordinator,
+                onRefresh: { model.reload() },
+            )
+            .ignoresSafeArea()
 
-            if model.isLoading {
-                ProgressView()
-                    .scaleEffect(1.1)
-                    .padding(20)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            if model.isLoading && model.errorMessage == nil {
+                VStack {
+                    ProgressView()
+                        .scaleEffect(1.1)
+                        .padding(20)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    Spacer()
+                }
+                .padding(.top, 60)
+                .allowsHitTesting(false)
             }
 
-            if let error = model.errorMessage {
+            if model.errorMessage != nil {
                 VStack(spacing: 12) {
-                    Text("Can't load app")
+                    Text("Unable to connect")
                         .font(.headline)
-                    Text(error)
-                        .font(.caption)
+                    Text("Check your internet connection and try again.")
+                        .font(.subheadline)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
-                    Button("Retry") {
+                    Button("Try again") {
                         model.loadHome()
                     }
                     .buttonStyle(.borderedProminent)
@@ -35,61 +45,63 @@ struct ContentView: View {
                 .padding()
             }
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            topBar
-        }
         .onAppear {
             if coordinator == nil {
                 let c = WebViewCoordinator(model: model)
                 coordinator = c
                 c.attach(to: model.webView)
             }
-            model.loadHome()
-        }
-    }
-
-    private var topBar: some View {
-        HStack(spacing: 12) {
-            Button {
-                model.goBack()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-            }
-            .disabled(!model.canGoBack)
-            .opacity(model.canGoBack ? 1 : 0.35)
-
-            VStack(alignment: .leading, spacing: 0) {
-                Text(AppConfig.displayName)
-                    .font(.subheadline.weight(.semibold))
-                Text(model.homeURL.host ?? "")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Button {
-                model.reload()
-            } label: {
-                Image(systemName: "arrow.clockwise")
+            // Only load home on first launch — returning from camera re-triggers
+            // onAppear and must not navigate away from the current page.
+            if !didLoadInitially {
+                didLoadInitially = true
+                model.loadHome()
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.bar)
     }
 }
 
 private struct WebViewRepresentable: UIViewRepresentable {
     @ObservedObject var model: WebViewModel
     @Binding var coordinator: WebViewCoordinator?
+    var onRefresh: () -> Void
 
-    func makeUIView(context: Context) -> WKWebView {
-        model.webView
+    func makeCoordinator() -> RefreshHandler {
+        RefreshHandler(onRefresh: onRefresh)
     }
 
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = model.webView
+        let refresh = UIRefreshControl()
+        refresh.addTarget(
+            context.coordinator,
+            action: #selector(RefreshHandler.didPullToRefresh),
+            for: .valueChanged,
+        )
+        webView.scrollView.refreshControl = refresh
+        context.coordinator.refreshControl = refresh
+        return webView
+    }
+
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        context.coordinator.onRefresh = onRefresh
+        if !model.isLoading {
+            context.coordinator.refreshControl?.endRefreshing()
+        }
+    }
+
+    final class RefreshHandler: NSObject {
+        var refreshControl: UIRefreshControl?
+        var onRefresh: () -> Void
+
+        init(onRefresh: @escaping () -> Void) {
+            self.onRefresh = onRefresh
+        }
+
+        @objc func didPullToRefresh() {
+            onRefresh()
+        }
+    }
 }
 
 #Preview {

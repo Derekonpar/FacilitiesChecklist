@@ -20,7 +20,16 @@
 # production
 /build
 
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.keystore
+*.jks
+
 # Xcode
+ios/Config/Local.xcconfig
 ios/build/
 *.xcuserstate
 xcuserdata/

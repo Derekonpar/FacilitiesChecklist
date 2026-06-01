@@ -21,10 +21,18 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "On Par Entertainment — Facilities",
+  title: "On Par Facilities",
   description:
     "Report and track maintenance issues across On Par Entertainment departments.",
   applicationName: "On Par Facilities",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "On Par Facilities",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({

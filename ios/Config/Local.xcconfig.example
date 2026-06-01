@@ -1,0 +1,2 @@
+// Optional — Simulator local Next.js only. Copy to Local.xcconfig (gitignored).
+WEB_APP_URL = http:/$()/localhost:3000

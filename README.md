@@ -46,15 +46,26 @@ New submissions appear on the dashboard **immediately** via Supabase Realtime.
 
 ## Deploy (Vercel)
 
+**Production:** https://facilities-checklist.vercel.app
+
+Set env vars in the Vercel dashboard (Production): Supabase URL/keys + `MANAGER_PIN`.
+
+Redeploy only when you change code:
+
 ```bash
 npx vercel --prod
 ```
 
-Link the GitHub repo and set all env vars above for Production.
+Or push to GitHub if the repo is connected to Vercel (auto-deploy).
 
-## iOS / TestFlight
+## Mobile apps
 
-See **[ios/TESTFLIGHT.md](ios/TESTFLIGHT.md)**. Open `ios/FacilitiesChecklist.xcodeproj`, set your Apple Team, update `ios/Config/Release.xcconfig` with your Vercel URL, then **Product → Archive** → upload to TestFlight.
+| Platform | Status | Guide |
+|----------|--------|--------|
+| **Android** (team internal) | Active now | [android/INTERNAL_TESTING.md](android/INTERNAL_TESTING.md) |
+| **iOS** TestFlight internal | Paused — Apple account verification | [NOTES-DISTRIBUTION.md](NOTES-DISTRIBUTION.md), [ios/TESTFLIGHT.md](ios/TESTFLIGHT.md) |
+
+Production web URL for both apps: **https://facilities-checklist.vercel.app**
 
 ## GitHub
 

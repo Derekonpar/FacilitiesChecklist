@@ -18,7 +18,7 @@ export function useIssues() {
   const fetchIssues = useCallback(async () => {
     if (!isSupabaseConfigured()) {
       setError(
-        "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local (and Vercel).",
+        "Unable to connect to the server. Check your connection or contact your manager.",
       );
       setLoading(false);
       return;

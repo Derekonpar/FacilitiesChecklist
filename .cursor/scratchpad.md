@@ -252,10 +252,10 @@ Reference: MaintainX Work Orders — list + detail split, filter bar, status pil
 ## Project Status Board
 
 - [x] Planner review approved by human (config answers 2026-06-01)
-- [ ] Phase 0 — Setup (0.1 in progress)
-- [ ] Phase 1 — MVP
-- [ ] Phase 2 — Polish
-- [ ] Phase 3 — iOS
+- [x] Phase 0–1 — Web MVP + Supabase + Vercel
+- [x] Phase 2 — MaintainX UI + mobile web
+- [ ] Phase 3 — iOS TestFlight internal **📌 PINNED** (Apple account verification)
+- [x] Phase 3b — Android internal testing setup (`android/`)
 
 ---
 
@@ -271,9 +271,23 @@ Reference: MaintainX Work Orders — list + detail split, filter bar, status pil
 
 **2026-06-01 — Executor:** Supabase submit + Realtime dashboard wired. Pushed to https://github.com/Derekonpar/FacilitiesChecklist. User must run SQL migrations + set Vercel env vars for production.
 
+**2026-06-01 — Distribution:** iOS TestFlight **internal-only** path documented; **pinned** until Apple account verified. Android WebView app added in `android/` for **Google Play Internal testing** or APK share. See **`NOTES-DISTRIBUTION.md`**.
+
 ---
 
 ## Executor's Feedback or Assistance Requests
+
+### 📌 Pinned — iOS (resume after Apple verification)
+
+- Archive ready in Xcode Organizer; bundle ID `com.onparentertainment.facilitieschecklist`.
+- Upload → App Store Connect → **TestFlight → Internal Testing only** (not External, not App Store Release).
+- Full notes: `NOTES-DISTRIBUTION.md`, `ios/TESTFLIGHT.md`.
+
+### Active — Android internal
+
+- Open `android/` in Android Studio → signed AAB → Play Console **Internal testing**.
+- Or build APK and share file to team immediately.
+- Guide: `android/INTERNAL_TESTING.md`.
 
 **Decisions locked (2026-06-01):**
 
