@@ -57,10 +57,13 @@ const settingsRes = await fetch(`${url}/auth/v1/settings`, {
 });
 const settings = await settingsRes.json();
 if (settings.mailer_autoconfirm) {
-  console.log("✓ Email autoconfirm enabled (sign-up works without inbox)");
+  console.log("✓ Email confirmation off (sign-up goes straight to dashboard)");
 } else {
   console.warn(
-    "⚠ Email confirmation still ON — in Supabase: Authentication → Providers → Email → disable Confirm email",
+    "⚠ Email confirmation still ON — run: npm run disable:email-confirm",
+  );
+  console.warn(
+    "   Or: Supabase → Authentication → Providers → Email → turn OFF Confirm email",
   );
 }
 

@@ -217,8 +217,9 @@ function LoginForm() {
       await afterAuthRedirect("signup");
     } else {
       setMessage(
-        "Check your email to confirm your account, then sign in. If confirmation is off in Supabase, try signing in now.",
+        "Account created. Sign in with the same email and PIN you just chose.",
       );
+      setMode("signin");
     }
     setSubmitting(false);
   }

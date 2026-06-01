@@ -14,7 +14,8 @@
     "apply:rls-006": "node scripts/apply-rls-006.mjs",
     "verify:rls": "node scripts/verify-rls.mjs",
     "apply:allowlist-users": "node scripts/apply-allowlist-users.mjs",
-    "apply:signup-fix": "node scripts/apply-signup-fix.mjs"
+    "apply:signup-fix": "node scripts/apply-signup-fix.mjs",
+    "disable:email-confirm": "node scripts/disable-email-confirmation.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
