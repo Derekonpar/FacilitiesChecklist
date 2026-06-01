@@ -2,7 +2,16 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Plus, Search, Wifi, WifiOff, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Plus,
+  Search,
+  Users,
+  Wifi,
+  WifiOff,
+  Loader2,
+} from "lucide-react";
+import { canManageTeam } from "@/lib/types/profile";
 import type { WorkflowStatus } from "@/lib/types/issue";
 import { issueTitle } from "@/lib/format";
 import { countStaleIssues } from "@/lib/issues";
@@ -172,6 +181,17 @@ export function ManagerApp() {
                 )}
               </p>
             </div>
+
+            {profile && canManageTeam(profile.role) ? (
+              <Link
+                href="/admin/team"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm lg:hidden"
+                aria-label="Team permissions"
+                title="Team permissions"
+              >
+                <Users className="h-5 w-5" />
+              </Link>
+            ) : null}
 
             <Link
               href="/submit"

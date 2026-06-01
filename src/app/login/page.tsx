@@ -106,9 +106,16 @@ function LoginForm() {
       return;
     }
 
+    if (role === "pending") {
+      setMessage(
+        "You're signed in. An admin must set your role to Manager under Team permissions before you can use the dashboard.",
+      );
+      return;
+    }
+
     if (authMode === "signin") {
       setError(
-        "Signed in, but manager access is not active yet. If you just created your account, wait a few seconds and try again — or ask an admin to set your role under Team permissions.",
+        "Signed in, but your team profile is missing. Try again in a few seconds, or ask an admin to open Team permissions and confirm you appear in the list.",
       );
       return;
     }

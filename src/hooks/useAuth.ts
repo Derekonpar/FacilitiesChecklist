@@ -34,8 +34,15 @@ export function useAuth() {
     setUser({ id: authUser.id, email: authUser.email });
 
     try {
-      const res = await fetch("/api/auth/profile", { cache: "no-store" });
-      const data = (await res.json()) as { profile?: Profile | null };
+      let res = await fetch("/api/auth/profile", { cache: "no-store" });
+      let data = (await res.json()) as { profile?: Profile | null };
+
+      if (!data.profile) {
+        await fetch("/api/auth/complete-signup", { method: "POST" });
+        res = await fetch("/api/auth/profile", { cache: "no-store" });
+        data = (await res.json()) as { profile?: Profile | null };
+      }
+
       setProfile(data.profile ?? null);
     } catch {
       setProfile(null);
