@@ -5,7 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ImageIcon } from "lucide-react";
 import type { DepartmentId } from "@/lib/constants";
 import { getDepartmentLabel } from "@/lib/departments";
-import { formatRelativeTime, issueTitle } from "@/lib/format";
+import {
+  formatCategoryOldestDate,
+  formatRelativeTime,
+  issueTitle,
+} from "@/lib/format";
 import { groupIssuesByDepartment, isIssueStale } from "@/lib/issues";
 import type { Issue } from "@/lib/types/issue";
 import type { ListTab } from "@/lib/types/issue";
@@ -34,7 +38,13 @@ export function IssueListPanel({
       ? issues.filter((i) => i.status === "open")
       : issues.filter((i) => i.status === "completed");
 
-  const grouped = useMemo(() => groupIssuesByDepartment(filtered), [filtered]);
+  const grouped = useMemo(
+    () =>
+      groupIssuesByDepartment(filtered, {
+        bubbleNewestDepartments: tab === "todo",
+      }),
+    [filtered, tab],
+  );
 
   /** Departments expanded to show issues — starts collapsed; not reset on realtime updates. */
   const [expanded, setExpanded] = useState<Set<DepartmentId>>(() => new Set());
@@ -100,39 +110,62 @@ export function IssueListPanel({
             No issues in this tab.
           </p>
         ) : (
-          grouped.map(({ department, label, issues: deptIssues }) => {
+          grouped.map(
+            ({
+              department,
+              label,
+              issues: deptIssues,
+              oldestCreatedAt,
+            }) => {
             const isOpen = expanded.has(department);
             const staleInDept = deptIssues.filter((i) => isIssueStale(i)).length;
+            const oldestLabel = formatCategoryOldestDate(oldestCreatedAt);
 
             return (
               <section key={department} className="mb-2">
                 <button
                   type="button"
                   onClick={() => toggleDepartment(department)}
-                  className="flex w-full items-center gap-2 rounded-xl bg-white px-3 py-2.5 text-left shadow-sm ring-1 ring-zinc-200/80 transition hover:bg-zinc-50 active:bg-zinc-100"
+                  className="flex w-full items-start gap-2 rounded-xl bg-white px-3 py-2.5 text-left shadow-sm ring-1 ring-zinc-200/80 transition hover:bg-zinc-50 active:bg-zinc-100"
                   aria-expanded={isOpen}
                   aria-controls={`dept-issues-${department}`}
                 >
                   <ChevronDown
                     className={cn(
-                      "h-4 w-4 shrink-0 text-zinc-500 transition",
+                      "mt-0.5 h-4 w-4 shrink-0 text-zinc-500 transition",
                       isOpen ? "rotate-0" : "-rotate-90",
                     )}
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-900">
-                    {label}
-                  </span>
-                  <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-zinc-700">
-                    {deptIssues.length}
-                  </span>
-                  {staleInDept > 0 ? (
-                    <span
-                      className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800"
-                      title="Open more than a week"
-                    >
-                      {staleInDept} stale
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-zinc-900">
+                      {label}
                     </span>
-                  ) : null}
+                    {!isOpen ? (
+                      <span
+                        className={cn(
+                          "mt-0.5 block text-xs tabular-nums",
+                          staleInDept > 0
+                            ? "font-medium text-amber-700"
+                            : "text-zinc-500",
+                        )}
+                      >
+                        Oldest: {oldestLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-zinc-700">
+                      {deptIssues.length}
+                    </span>
+                    {staleInDept > 0 ? (
+                      <span
+                        className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800"
+                        title="Open more than a week"
+                      >
+                        {staleInDept} stale
+                      </span>
+                    ) : null}
+                  </div>
                 </button>
 
                 {isOpen ? (
@@ -153,7 +186,8 @@ export function IssueListPanel({
                 ) : null}
               </section>
             );
-          })
+          },
+          )
         )}
       </div>
     </div>

@@ -17,6 +17,14 @@ export function formatIssueDateTime(iso: string): string {
   return format(d, "MMM d, h:mm a");
 }
 
+/** Compact date for department headers (oldest open item). */
+export function formatCategoryOldestDate(iso: string): string {
+  const d = parseISO(iso);
+  const year = new Date().getFullYear();
+  if (d.getFullYear() === year) return format(d, "MMM d");
+  return format(d, "MMM d, yyyy");
+}
+
 export function issueTitle(issue: { department: string; comment: string }): string {
   const firstLine = issue.comment.split(/[.!?\n]/)[0]?.trim() ?? "Issue";
   return firstLine.length > 56 ? `${firstLine.slice(0, 53)}…` : firstLine;

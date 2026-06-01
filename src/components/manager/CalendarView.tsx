@@ -15,30 +15,44 @@ import {
   startOfWeek,
   subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wrench } from "lucide-react";
 import { DEPARTMENT_COLORS, getDepartmentLabel } from "@/lib/departments";
+import { MAINTENANCE_COLOR } from "@/lib/maintenance/constants";
+import { maintenanceOccursOnDay } from "@/lib/maintenance/recurrence";
 import { issueTitle } from "@/lib/format";
 import type { Issue } from "@/lib/types/issue";
+import type { MaintenanceItem } from "@/lib/types/maintenance";
 import { cn } from "@/lib/utils";
 
 type CalendarViewProps = {
   issues: Issue[];
+  maintenanceItems: MaintenanceItem[];
   month: Date;
   onMonthChange: (d: Date) => void;
   calendarMode: "month" | "week";
   onCalendarModeChange: (m: "month" | "week") => void;
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+  selectedIssueId: string | null;
+  selectedMaintenanceId: string | null;
+  onSelectIssue: (id: string) => void;
+  onSelectMaintenance: (id: string) => void;
 };
+
+function shortMaintenanceTitle(title: string): string {
+  const t = title.split("-")[0]?.trim() ?? title;
+  return t.length > 28 ? `${t.slice(0, 25)}…` : t;
+}
 
 export function CalendarView({
   issues,
+  maintenanceItems,
   month,
   onMonthChange,
   calendarMode,
   onCalendarModeChange,
-  selectedId,
-  onSelect,
+  selectedIssueId,
+  selectedMaintenanceId,
+  onSelectIssue,
+  onSelectMaintenance,
 }: CalendarViewProps) {
   const [focusedDay, setFocusedDay] = useState<Date | null>(null);
 
@@ -57,19 +71,22 @@ export function CalendarView({
     return issues.filter((i) => isSameDay(parseISO(i.created_at), day));
   }
 
+  function maintenanceForDay(day: Date) {
+    return maintenanceItems.filter((item) => maintenanceOccursOnDay(item, day));
+  }
+
   const displayDay = focusedDay ?? new Date();
   const focusedIssues = issuesForDay(displayDay);
+  const focusedMaintenance = maintenanceForDay(displayDay);
 
   const monthGridDays = useMemo(() => days, [days]);
 
-  function selectDay(day: Date, firstIssueId?: string) {
+  function selectDay(day: Date) {
     setFocusedDay(day);
-    if (firstIssueId) onSelect(firstIssueId);
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
-      {/* Header */}
       <div className="shrink-0 border-b border-zinc-200 px-3 py-3 md:px-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex justify-center md:justify-start">
@@ -113,7 +130,6 @@ export function CalendarView({
         </div>
       </div>
 
-      {/* Desktop: classic grid */}
       <div className="hidden min-h-0 flex-1 flex-col overflow-hidden md:flex">
         <WeekdayHeader />
         <div
@@ -129,15 +145,17 @@ export function CalendarView({
               month={month}
               calendarMode={calendarMode}
               issues={issuesForDay(day)}
-              selectedId={selectedId}
-              onSelect={onSelect}
+              maintenance={maintenanceForDay(day)}
+              selectedIssueId={selectedIssueId}
+              selectedMaintenanceId={selectedMaintenanceId}
+              onSelectIssue={onSelectIssue}
+              onSelectMaintenance={onSelectMaintenance}
             />
           ))}
         </div>
         <Legend />
       </div>
 
-      {/* Mobile: legible month or stacked week */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:hidden">
         {calendarMode === "month" ? (
           <>
@@ -145,15 +163,17 @@ export function CalendarView({
             <div className="grid shrink-0 grid-cols-7 border-b border-zinc-100 bg-white px-1 py-1">
               {monthGridDays.map((day) => {
                 const dayIssues = issuesForDay(day);
+                const dayMaint = maintenanceForDay(day);
                 const inMonth = isSameMonth(day, month);
                 const today = isSameDay(day, new Date());
                 const focused = focusedDay && isSameDay(day, focusedDay);
+                const total = dayIssues.length + dayMaint.length;
 
                 return (
                   <button
                     key={day.toISOString()}
                     type="button"
-                    onClick={() => selectDay(day, dayIssues[0]?.id)}
+                    onClick={() => selectDay(day)}
                     className={cn(
                       "flex min-h-[52px] flex-col items-center rounded-lg py-1.5 transition",
                       !inMonth && "opacity-40",
@@ -170,21 +190,27 @@ export function CalendarView({
                     >
                       {format(day, "d")}
                     </span>
-                    <div className="mt-1 flex gap-0.5">
-                      {dayIssues.slice(0, 3).map((issue) => (
+                    <div className="mt-1 flex flex-wrap justify-center gap-0.5 px-0.5">
+                      {dayMaint.slice(0, 2).map((item) => (
+                        <span
+                          key={item.id}
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ backgroundColor: MAINTENANCE_COLOR }}
+                        />
+                      ))}
+                      {dayIssues.slice(0, 2).map((issue) => (
                         <span
                           key={issue.id}
                           className="h-1.5 w-1.5 rounded-full"
                           style={{
-                            backgroundColor:
-                              DEPARTMENT_COLORS[issue.department],
+                            backgroundColor: DEPARTMENT_COLORS[issue.department],
                           }}
                         />
                       ))}
                     </div>
-                    {dayIssues.length > 3 ? (
+                    {total > 4 ? (
                       <span className="mt-0.5 text-[10px] text-zinc-500">
-                        +{dayIssues.length - 3}
+                        +{total - 4}
                       </span>
                     ) : null}
                   </button>
@@ -194,14 +220,18 @@ export function CalendarView({
             <MobileDayAgenda
               day={displayDay}
               issues={focusedIssues}
-              selectedId={selectedId}
-              onSelect={onSelect}
+              maintenance={focusedMaintenance}
+              selectedIssueId={selectedIssueId}
+              selectedMaintenanceId={selectedMaintenanceId}
+              onSelectIssue={onSelectIssue}
+              onSelectMaintenance={onSelectMaintenance}
             />
           </>
         ) : (
           <div className="flex-1 overflow-y-auto px-3 py-2">
             {weekDays.map((day) => {
               const dayIssues = issuesForDay(day);
+              const dayMaint = maintenanceForDay(day);
               const today = isSameDay(day, new Date());
               return (
                 <div
@@ -217,16 +247,25 @@ export function CalendarView({
                     {format(day, "EEEE, MMM d")}
                     {today ? " · Today" : ""}
                   </p>
-                  {dayIssues.length === 0 ? (
-                    <p className="text-sm text-zinc-500">No issues</p>
+                  {dayMaint.length === 0 && dayIssues.length === 0 ? (
+                    <p className="text-sm text-zinc-500">Nothing scheduled</p>
                   ) : (
                     <div className="space-y-2">
+                      {dayMaint.map((item) => (
+                        <MaintenanceChip
+                          key={item.id}
+                          item={item}
+                          selected={selectedMaintenanceId === item.id}
+                          onSelect={() => onSelectMaintenance(item.id)}
+                          large
+                        />
+                      ))}
                       {dayIssues.map((issue) => (
                         <IssueChip
                           key={issue.id}
                           issue={issue}
-                          selected={selectedId === issue.id}
-                          onSelect={() => onSelect(issue.id)}
+                          selected={selectedIssueId === issue.id}
+                          onSelect={() => onSelectIssue(issue.id)}
                           large
                         />
                       ))}
@@ -289,19 +328,31 @@ function DesktopDayCell({
   month,
   calendarMode,
   issues,
-  selectedId,
-  onSelect,
+  maintenance,
+  selectedIssueId,
+  selectedMaintenanceId,
+  onSelectIssue,
+  onSelectMaintenance,
 }: {
   day: Date;
   month: Date;
   calendarMode: "month" | "week";
   issues: Issue[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+  maintenance: MaintenanceItem[];
+  selectedIssueId: string | null;
+  selectedMaintenanceId: string | null;
+  onSelectIssue: (id: string) => void;
+  onSelectMaintenance: (id: string) => void;
 }) {
   const inMonth = isSameMonth(day, month);
   const today = isSameDay(day, new Date());
-  const max = calendarMode === "week" ? 12 : 3;
+  const max = calendarMode === "week" ? 10 : 4;
+  const events = [
+    ...maintenance.map((item) => ({ type: "maint" as const, item })),
+    ...issues.map((issue) => ({ type: "issue" as const, issue })),
+  ];
+  const shown = events.slice(0, max);
+  const extra = events.length - shown.length;
 
   return (
     <div
@@ -324,16 +375,25 @@ function DesktopDayCell({
         </span>
       </div>
       <div className="space-y-1 px-0.5">
-        {issues.slice(0, max).map((issue) => (
-          <IssueChip
-            key={issue.id}
-            issue={issue}
-            selected={selectedId === issue.id}
-            onSelect={() => onSelect(issue.id)}
-          />
-        ))}
-        {issues.length > max ? (
-          <p className="px-1 text-xs text-zinc-500">+{issues.length - max} more</p>
+        {shown.map((ev) =>
+          ev.type === "maint" ? (
+            <MaintenanceChip
+              key={ev.item.id}
+              item={ev.item}
+              selected={selectedMaintenanceId === ev.item.id}
+              onSelect={() => onSelectMaintenance(ev.item.id)}
+            />
+          ) : (
+            <IssueChip
+              key={ev.issue.id}
+              issue={ev.issue}
+              selected={selectedIssueId === ev.issue.id}
+              onSelect={() => onSelectIssue(ev.issue.id)}
+            />
+          ),
+        )}
+        {extra > 0 ? (
+          <p className="px-1 text-xs text-zinc-500">+{extra} more</p>
         ) : null}
       </div>
     </div>
@@ -343,14 +403,22 @@ function DesktopDayCell({
 function MobileDayAgenda({
   day,
   issues,
-  selectedId,
-  onSelect,
+  maintenance,
+  selectedIssueId,
+  selectedMaintenanceId,
+  onSelectIssue,
+  onSelectMaintenance,
 }: {
   day: Date;
   issues: Issue[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+  maintenance: MaintenanceItem[];
+  selectedIssueId: string | null;
+  selectedMaintenanceId: string | null;
+  onSelectIssue: (id: string) => void;
+  onSelectMaintenance: (id: string) => void;
 }) {
+  const total = issues.length + maintenance.length;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col border-t border-zinc-200 bg-zinc-50">
       <div className="shrink-0 border-b border-zinc-200 bg-white px-4 py-3">
@@ -358,22 +426,31 @@ function MobileDayAgenda({
           {format(day, "EEEE, MMMM d")}
         </p>
         <p className="text-xs text-zinc-500">
-          {issues.length} issue{issues.length === 1 ? "" : "s"} — tap to open
+          {total} item{total === 1 ? "" : "s"} — tap to open
         </p>
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-3">
-        {issues.length === 0 ? (
+        {total === 0 ? (
           <p className="py-6 text-center text-sm text-zinc-500">
-            No issues this day
+            Nothing scheduled this day
           </p>
         ) : (
           <div className="space-y-2">
+            {maintenance.map((item) => (
+              <MaintenanceChip
+                key={item.id}
+                item={item}
+                selected={selectedMaintenanceId === item.id}
+                onSelect={() => onSelectMaintenance(item.id)}
+                large
+              />
+            ))}
             {issues.map((issue) => (
               <IssueChip
                 key={issue.id}
                 issue={issue}
-                selected={selectedId === issue.id}
-                onSelect={() => onSelect(issue.id)}
+                selected={selectedIssueId === issue.id}
+                onSelect={() => onSelectIssue(issue.id)}
                 large
               />
             ))}
@@ -381,6 +458,46 @@ function MobileDayAgenda({
         )}
       </div>
     </div>
+  );
+}
+
+function MaintenanceChip({
+  item,
+  selected,
+  onSelect,
+  large,
+}: {
+  item: MaintenanceItem;
+  selected: boolean;
+  onSelect: () => void;
+  large?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "flex w-full items-start gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 text-left shadow-sm active:bg-indigo-100",
+        large ? "px-3 py-3" : "px-1.5 py-1",
+        selected && "ring-2 ring-indigo-600",
+      )}
+      style={{ borderLeftWidth: 4, borderLeftColor: MAINTENANCE_COLOR }}
+    >
+      <Wrench
+        className={cn(
+          "shrink-0 text-indigo-600",
+          large ? "mt-0.5 h-4 w-4" : "h-3 w-3",
+        )}
+      />
+      <span
+        className={cn(
+          "min-w-0 font-medium text-indigo-950",
+          large ? "text-sm leading-snug" : "line-clamp-2 text-[10px] leading-tight",
+        )}
+      >
+        {large ? item.title : shortMaintenanceTitle(item.title)}
+      </span>
+    </button>
   );
 }
 
@@ -430,24 +547,12 @@ function Legend() {
   return (
     <div className="hidden border-t border-zinc-200 px-4 py-2 md:block">
       <p className="text-xs text-zinc-500">
-        Color strip = department · Click an issue to open details
+        <span
+          className="mr-1 inline-block h-2 w-2 rounded-full"
+          style={{ backgroundColor: MAINTENANCE_COLOR }}
+        />
+        Indigo = recurring maintenance · Colored strip = staff issue by department
       </p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {Object.entries(DEPARTMENT_COLORS)
-          .slice(0, 8)
-          .map(([id, color]) => (
-            <span
-              key={id}
-              className="flex items-center gap-1 text-xs text-zinc-600"
-            >
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: color }}
-              />
-              {getDepartmentLabel(id as Issue["department"])}
-            </span>
-          ))}
-      </div>
     </div>
   );
 }

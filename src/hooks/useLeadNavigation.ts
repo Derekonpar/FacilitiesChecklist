@@ -39,6 +39,7 @@ export function useLeadNavigation() {
     view: state.view,
     tab: state.tab,
     issueId: state.issueId,
+    maintenanceId: state.maintenanceId,
     navigate,
     goBack,
   };

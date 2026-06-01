@@ -18,10 +18,23 @@ export type IssuesByDepartment = {
   department: DepartmentId;
   label: string;
   issues: Issue[];
+  /** Oldest issue in the group (by created_at). */
+  oldestCreatedAt: string;
+  /** Newest issue in the group — used to bubble departments with fresh work to the top. */
+  newestCreatedAt: string;
 };
 
-/** Groups issues by department in venue order; only departments with issues. */
-export function groupIssuesByDepartment(issues: Issue[]): IssuesByDepartment[] {
+export type GroupIssuesOptions = {
+  /** When true, departments with the most recently created issue appear first. */
+  bubbleNewestDepartments?: boolean;
+};
+
+/** Groups issues by department; only departments with issues. */
+export function groupIssuesByDepartment(
+  issues: Issue[],
+  options: GroupIssuesOptions = {},
+): IssuesByDepartment[] {
+  const { bubbleNewestDepartments = true } = options;
   const map = new Map<DepartmentId, Issue[]>();
   for (const issue of issues) {
     const list = map.get(issue.department) ?? [];
@@ -29,12 +42,33 @@ export function groupIssuesByDepartment(issues: Issue[]): IssuesByDepartment[] {
     map.set(issue.department, list);
   }
 
-  return DEPARTMENTS.filter((d) => map.has(d.id)).map((d) => ({
-    department: d.id,
-    label: d.label,
-    issues: (map.get(d.id) ?? []).sort(
+  const groups: IssuesByDepartment[] = [];
+
+  for (const d of DEPARTMENTS) {
+    const raw = map.get(d.id);
+    if (!raw?.length) continue;
+
+    const sorted = [...raw].sort(
       (a, b) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    ),
-  }));
+    );
+
+    groups.push({
+      department: d.id,
+      label: d.label,
+      issues: sorted,
+      oldestCreatedAt: sorted[0]!.created_at,
+      newestCreatedAt: sorted[sorted.length - 1]!.created_at,
+    });
+  }
+
+  if (bubbleNewestDepartments) {
+    groups.sort(
+      (a, b) =>
+        new Date(b.newestCreatedAt).getTime() -
+        new Date(a.newestCreatedAt).getTime(),
+    );
+  }
+
+  return groups;
 }
