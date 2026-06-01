@@ -19,6 +19,7 @@ export function useAuth() {
     }
 
     const supabase = createClient();
+    await supabase.auth.getSession();
     const {
       data: { user: authUser },
     } = await supabase.auth.getUser();
@@ -32,13 +33,13 @@ export function useAuth() {
 
     setUser({ id: authUser.id, email: authUser.email });
 
-    const { data: row } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", authUser.id)
-      .single();
-
-    setProfile((row as Profile) ?? null);
+    try {
+      const res = await fetch("/api/auth/profile", { cache: "no-store" });
+      const data = (await res.json()) as { profile?: Profile | null };
+      setProfile(data.profile ?? null);
+    } catch {
+      setProfile(null);
+    }
     setLoading(false);
   }, []);
 

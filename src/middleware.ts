@@ -1,35 +1,18 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 import {
-  canAccessManagerDashboard,
-  type UserRole,
-} from "@/lib/types/profile";
+  getManagerProfileRoleWithService,
+  managerDashboardAllowed,
+} from "@/lib/auth/session";
+import { createMiddlewareSupabase } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const ctx = createMiddlewareSupabase(
+    request,
+    NextResponse.next({ request }),
+  );
+  if (!ctx) return NextResponse.next({ request });
 
-  const url = getSupabaseUrl();
-  const key = getSupabaseAnonKey();
-  if (!url || !key) return response;
-
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value),
-        );
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
-        );
-      },
-    },
-  });
-
+  const { supabase } = ctx;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -37,34 +20,43 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isProtected =
     pathname.startsWith("/lead") || pathname.startsWith("/admin");
+  const isLogin = pathname === "/login";
 
-  if (!isProtected) return response;
+  if (user && (isLogin || isProtected)) {
+    const role = await getManagerProfileRoleWithService(user.id);
 
-  if (!user) {
+    if (isLogin && managerDashboardAllowed(role)) {
+      const next = request.nextUrl.searchParams.get("next") || "/lead";
+      const dest = next.startsWith("/") ? next : "/lead";
+      return NextResponse.redirect(new URL(dest, request.url));
+    }
+
+    if (isProtected && !managerDashboardAllowed(role)) {
+      const login = new URL("/login", request.url);
+      login.searchParams.set("error", "access");
+      return NextResponse.redirect(login);
+    }
+
+    if (
+      isProtected &&
+      pathname.startsWith("/admin") &&
+      role !== "admin"
+    ) {
+      return NextResponse.redirect(new URL("/lead", request.url));
+    }
+  }
+
+  if (isProtected && !user) {
     const login = new URL("/login", request.url);
     login.searchParams.set("next", pathname);
     return NextResponse.redirect(login);
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || !canAccessManagerDashboard(profile.role as UserRole)) {
-    const login = new URL("/login", request.url);
-    login.searchParams.set("error", "access");
-    return NextResponse.redirect(login);
-  }
-
-  if (pathname.startsWith("/admin") && profile.role !== "admin") {
-    return NextResponse.redirect(new URL("/lead", request.url));
-  }
-
-  return response;
+  return ctx.getResponse();
 }
 
 export const config = {
-  matcher: ["/lead/:path*", "/admin/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

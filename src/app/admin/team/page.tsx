@@ -123,7 +123,7 @@ function TeamAdmin() {
             Allow a new sign-up
           </h2>
           <p className="mt-1 text-xs text-zinc-500">
-            They use username@onparbar.com and create a 4-digit PIN at /login.
+            They use username@onparbar.com and create a 6-digit PIN at /login.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input

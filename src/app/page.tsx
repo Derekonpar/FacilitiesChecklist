@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { CalendarDays, ClipboardList, Wrench } from "lucide-react";
+import { ClipboardList, Wrench } from "lucide-react";
+import { ManagerDashboardLink } from "@/components/home/ManagerDashboardLink";
 import { VENUE_NAME } from "@/lib/constants";
 
 export default function HomePage() {
@@ -39,22 +40,7 @@ export default function HomePage() {
             </span>
           </Link>
 
-          <Link
-            href="/login?next=/lead"
-            className="surface-card flex items-center gap-4 p-4 transition active:scale-[0.99]"
-          >
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-500/10 text-teal-700">
-              <CalendarDays className="h-6 w-6" />
-            </span>
-            <span className="text-left">
-              <span className="block font-semibold text-zinc-900">
-                Manager dashboard
-              </span>
-              <span className="text-sm text-zinc-500">
-                Sign in with your On Par team account
-              </span>
-            </span>
-          </Link>
+          <ManagerDashboardLink />
         </div>
       </div>
     </main>

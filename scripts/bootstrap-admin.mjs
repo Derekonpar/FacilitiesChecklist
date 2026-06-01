@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Create derek@onparbar.com as admin (skips email confirmation).
- * Set DEREK_INITIAL_PIN=1234 in .env (exactly 4 digits).
+ * Set DEREK_INITIAL_PIN=123456 in .env (exactly 6 digits).
  */
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
@@ -31,8 +31,8 @@ if (!url || !serviceKey) {
   process.exit(1);
 }
 
-if (!/^\d{4}$/.test(pin ?? "")) {
-  console.error("Add DEREK_INITIAL_PIN=1234 (exactly 4 digits) to .env, then re-run.");
+if (!/^\d{6}$/.test(pin ?? "")) {
+  console.error("Add DEREK_INITIAL_PIN=123456 (exactly 6 digits) to .env, then re-run.");
   process.exit(1);
 }
 
@@ -69,5 +69,5 @@ if (error) {
 }
 
 console.log("Created derek@onparbar.com as admin.");
-console.log("Sign in at /login with that email and your 4-digit PIN.");
+console.log("Sign in at /login with that email and your 6-digit PIN.");
 console.log("User id:", data.user?.id);

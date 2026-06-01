@@ -32,7 +32,7 @@ export function ManagerApp() {
     issueId: selectedId,
     maintenanceId,
     navigate,
-    goBack,
+    closeDetail,
   } = useLeadNavigation();
   const [search, setSearch] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
@@ -116,10 +116,6 @@ export function ManagerApp() {
       issueId: null,
       maintenanceId: id,
     });
-  }
-
-  function closeDetail() {
-    goBack();
   }
 
   function changeView(nextView: typeof view) {

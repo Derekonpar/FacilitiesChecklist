@@ -10,7 +10,9 @@
     "seed:maintenance": "node scripts/seed-maintenance.mjs",
     "verify:auth": "node scripts/verify-auth-setup.mjs",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs",
-    "apply:auth-005": "node scripts/apply-auth-005.mjs"
+    "apply:auth-005": "node scripts/apply-auth-005.mjs",
+    "apply:rls-006": "node scripts/apply-rls-006.mjs",
+    "verify:rls": "node scripts/verify-rls.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

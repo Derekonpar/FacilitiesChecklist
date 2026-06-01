@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
   AUTO_ADMIN_LOCAL_PARTS,
@@ -45,28 +45,73 @@ function LoginForm() {
   );
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
-  async function afterAuthRedirect() {
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setCheckingSession(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const role = await fetchProfileRole();
+      if (cancelled) return;
+      if (role && canAccessManagerDashboard(role)) {
+        router.replace(next);
+        router.refresh();
+        return;
+      }
+      setCheckingSession(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [next, router]);
+
+  async function fetchProfileRole(): Promise<UserRole | null> {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      try {
+        const res = await fetch("/api/auth/profile", { cache: "no-store" });
+        const data = (await res.json()) as { profile?: { role?: UserRole } };
+        if (data.profile?.role) return data.profile.role;
+      } catch {
+        /* retry */
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, 150 + attempt * 100),
+      );
+    }
+    return null;
+  }
+
+  async function afterAuthRedirect(authMode: "signin" | "signup") {
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    const role = await fetchProfileRole();
 
-    if (profile && canAccessManagerDashboard(profile.role as UserRole)) {
+    if (role && canAccessManagerDashboard(role)) {
       router.replace(next);
       router.refresh();
-    } else {
-      setMessage(
-        "Account created. An admin must grant you access in Team permissions before you can use the dashboard.",
-      );
+      return;
     }
+
+    if (authMode === "signin") {
+      setError(
+        "Signed in, but manager access is not active yet. If you just created your account, wait a few seconds and try again — or ask an admin to set your role under Team permissions.",
+      );
+      return;
+    }
+
+    setMessage(
+      "Account created. An admin must grant you Manager access in Team permissions before you can use the dashboard. Core team accounts are usually ready within a few seconds — try signing in.",
+    );
   }
 
   function validatePinFields(): boolean {
@@ -111,7 +156,7 @@ function LoginForm() {
       return;
     }
 
-    await afterAuthRedirect();
+    await afterAuthRedirect("signin");
     setSubmitting(false);
   }
 
@@ -167,7 +212,7 @@ function LoginForm() {
     }
 
     if (data.session) {
-      await afterAuthRedirect();
+      await afterAuthRedirect("signup");
     } else {
       setMessage(
         "Check your email to confirm your account, then sign in. If confirmation is off in Supabase, try signing in now.",
@@ -192,7 +237,7 @@ function LoginForm() {
           </p>
           <h1 className="mt-1 text-2xl font-bold text-zinc-900">Team sign in</h1>
           <p className="mt-2 text-sm text-zinc-600">
-            Use your On Par username or email, then your 4-digit PIN.
+            Use your On Par username or email, then your 6-digit PIN.
           </p>
 
           <div className="mt-5 flex rounded-lg border border-zinc-200 p-0.5">
@@ -222,23 +267,32 @@ function LoginForm() {
             </button>
           </div>
 
-          {!isSupabaseConfigured() ? (
+          {checkingSession ? (
+            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-zinc-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Checking this device…
+            </div>
+          ) : null}
+
+          {!checkingSession && !isSupabaseConfigured() ? (
             <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
               App is not connected to the server. Check environment variables.
             </p>
           ) : null}
 
-          {error ? (
+          {!checkingSession && error ? (
             <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
               {error}
             </p>
           ) : null}
-          {message ? (
+          {!checkingSession && message ? (
             <p className="mt-4 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900">
               {message}
             </p>
           ) : null}
 
+          {!checkingSession ? (
+          <>
           <form
             onSubmit={mode === "signin" ? handleSignIn : handleSignUp}
             className="mt-5 space-y-4"
@@ -268,7 +322,7 @@ function LoginForm() {
             ) : null}
 
             <label className="block text-sm font-semibold text-zinc-900">
-              {mode === "signup" ? "Create a 4-digit PIN" : "4-digit PIN"}
+              {mode === "signup" ? "Create a 6-digit PIN" : "6-digit PIN"}
               <input
                 required
                 type="password"
@@ -276,7 +330,7 @@ function LoginForm() {
                 autoComplete={
                   mode === "signin" ? "current-password" : "new-password"
                 }
-                maxLength={4}
+                maxLength={6}
                 placeholder="••••"
                 value={pin}
                 onChange={(e) => setPin(normalizePinInput(e.target.value))}
@@ -286,13 +340,13 @@ function LoginForm() {
 
             {mode === "signup" ? (
               <label className="block text-sm font-semibold text-zinc-900">
-                Confirm 4-digit PIN
+                Confirm 6-digit PIN
                 <input
                   required
                   type="password"
                   inputMode="numeric"
                   autoComplete="new-password"
-                  maxLength={4}
+                  maxLength={6}
                   placeholder="••••"
                   value={confirmPin}
                   onChange={(e) =>
@@ -329,6 +383,8 @@ function LoginForm() {
               </span>
             ))}
           </p>
+          </>
+          ) : null}
         </div>
       </div>
     </div>

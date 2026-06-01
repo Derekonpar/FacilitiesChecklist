@@ -31,9 +31,12 @@ export function useLeadNavigation() {
     [router, pathname, state],
   );
 
-  const goBack = useCallback(() => {
-    router.back();
-  }, [router]);
+  const closeDetail = useCallback(() => {
+    navigate(
+      { issueId: null, maintenanceId: null },
+      { replace: true },
+    );
+  }, [navigate]);
 
   return {
     view: state.view,
@@ -41,6 +44,6 @@ export function useLeadNavigation() {
     issueId: state.issueId,
     maintenanceId: state.maintenanceId,
     navigate,
-    goBack,
+    closeDetail,
   };
 }

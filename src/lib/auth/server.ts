@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { loadProfileByUserId } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, UserRole } from "@/lib/types/profile";
 import { canAccessManagerDashboard, canManageTeam } from "@/lib/types/profile";
@@ -18,13 +19,8 @@ export async function getAuthContext(): Promise<AuthContext | null> {
 
   if (userError || !user?.email) return null;
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError || !profile) return null;
+  const profile = await loadProfileByUserId(user.id);
+  if (!profile) return null;
 
   return {
     userId: user.id,
