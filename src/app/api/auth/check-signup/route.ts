@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAllowedOnparEmail } from "@/lib/auth/allowlist";
+import { isAllowedOnparEmail, isAllowedSignupEmail } from "@/lib/auth/allowlist";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -8,17 +8,30 @@ export async function GET(request: Request) {
     return NextResponse.json({ allowed: false });
   }
 
-  if (isAllowedOnparEmail(email)) {
+  if (isAllowedSignupEmail(email)) {
     return NextResponse.json({ allowed: true });
   }
 
   const local = email.split("@")[0];
-  if (!local || email.split("@")[1] !== "onparbar.com") {
-    return NextResponse.json({ allowed: false });
-  }
+  const domain = email.split("@")[1];
 
   try {
     const supabase = createServiceClient();
+
+    const { data: fullEmail } = await supabase
+      .from("signup_allowed_emails")
+      .select("email")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (fullEmail) {
+      return NextResponse.json({ allowed: true });
+    }
+
+    if (!local || domain !== "onparbar.com") {
+      return NextResponse.json({ allowed: false });
+    }
+
     const { data } = await supabase
       .from("signup_allowlist")
       .select("local_part")
@@ -27,6 +40,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ allowed: Boolean(data) });
   } catch {
-    return NextResponse.json({ allowed: isAllowedOnparEmail(email) });
+    return NextResponse.json({ allowed: isAllowedSignupEmail(email) });
   }
 }

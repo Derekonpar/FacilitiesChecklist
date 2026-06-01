@@ -5,9 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
-  AUTO_ADMIN_LOCAL_PARTS,
-  allowedEmailsHint,
-  isAllowedOnparEmail,
+  isAllowedSignupEmail,
   parseLoginIdentifier,
 } from "@/lib/auth/allowlist";
 import {
@@ -133,11 +131,6 @@ function LoginForm() {
     setMessage("");
 
     const { email } = parseLoginIdentifier(identifier);
-    if (!isAllowedOnparEmail(email)) {
-      setError("Use your @onparbar.com team email or username.");
-      setSubmitting(false);
-      return;
-    }
 
     if (!validatePinFields()) {
       setSubmitting(false);
@@ -161,7 +154,7 @@ function LoginForm() {
   }
 
   async function canRegister(email: string): Promise<boolean> {
-    if (isAllowedOnparEmail(email)) return true;
+    if (isAllowedSignupEmail(email)) return true;
     try {
       const res = await fetch(
         `/api/auth/check-signup?email=${encodeURIComponent(email)}`,
@@ -302,7 +295,6 @@ function LoginForm() {
               <input
                 required
                 autoComplete="username"
-                placeholder="derek or derek@onparbar.com"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className={fieldClass}
@@ -316,7 +308,6 @@ function LoginForm() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className={fieldClass}
-                  placeholder="Derek"
                 />
               </label>
             ) : null}
@@ -374,15 +365,6 @@ function LoginForm() {
               )}
             </button>
           </form>
-
-          <p className="mt-5 text-xs leading-relaxed text-zinc-500">
-            Core team (admin on sign-up):{" "}
-            {AUTO_ADMIN_LOCAL_PARTS.map((p) => (
-              <span key={p} className="font-medium text-zinc-700">
-                {p}@onparbar.com{" "}
-              </span>
-            ))}
-          </p>
           </>
           ) : null}
         </div>

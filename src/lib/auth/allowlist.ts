@@ -12,10 +12,15 @@ export const AUTO_ADMIN_LOCAL_PARTS = [
 ] as const;
 
 /**
- * Extra local-parts you add in code over time (sign-up allowed, role = pending until set in Team).
- * Or add via Admin → Team → “Allow new sign-up” (writes to signup_allowlist table).
+ * Extra @onparbar.com local-parts (sign-up allowed, role = pending until set in Team).
+ * Or add via Admin → Team → “Allow new sign-up”.
  */
-export const ADDITIONAL_ALLOWED_LOCAL_PARTS: string[] = [];
+export const ADDITIONAL_ALLOWED_LOCAL_PARTS: string[] = ["brooke"];
+
+/** Full email addresses outside @onparbar.com allowed to sign up. */
+export const ADDITIONAL_ALLOWED_FULL_EMAILS: string[] = [
+  "taylorhouseman20@gmail.com",
+];
 
 export type AutoAdminLocalPart = (typeof AUTO_ADMIN_LOCAL_PARTS)[number];
 
@@ -57,10 +62,15 @@ export function isAllowedOnparEmail(email: string): boolean {
   );
 }
 
-export function allowedEmailsHint(): string {
-  const core = AUTO_ADMIN_LOCAL_PARTS.map((p) => `${p}@${ONPAR_EMAIL_DOMAIN}`);
-  const extra = ADDITIONAL_ALLOWED_LOCAL_PARTS.map(
-    (p) => `${p}@${ONPAR_EMAIL_DOMAIN}`,
-  );
-  return [...core, ...extra].join(", ");
+/** Sign-up allowlist: @onparbar.com rules plus explicit full emails. */
+export function isAllowedSignupEmail(email: string): boolean {
+  const normalized = email.trim().toLowerCase();
+  if (
+    ADDITIONAL_ALLOWED_FULL_EMAILS.map((e) => e.toLowerCase()).includes(
+      normalized,
+    )
+  ) {
+    return true;
+  }
+  return isAllowedOnparEmail(normalized);
 }
