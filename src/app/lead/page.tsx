@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { PinGate } from "@/components/manager/PinGate";
+import { AuthGate } from "@/components/auth/AuthGate";
 import { ManagerApp } from "@/components/manager/ManagerApp";
 
 export default function LeadPage() {
   return (
-    <PinGate>
+    <AuthGate>
       <Suspense
         fallback={
           <div className="flex min-h-[100dvh] items-center justify-center text-zinc-500">
@@ -14,6 +14,6 @@ export default function LeadPage() {
       >
         <ManagerApp />
       </Suspense>
-    </PinGate>
+    </AuthGate>
   );
 }

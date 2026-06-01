@@ -1,23 +1,14 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { MANAGER_SESSION_COOKIE } from "@/lib/constants";
+import { isAuthContext, requireManagerAuth } from "@/lib/auth/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { WorkflowStatus } from "@/lib/types/issue";
-
-async function requireManager() {
-  const cookieStore = await cookies();
-  if (cookieStore.get(MANAGER_SESSION_COOKIE)?.value !== "1") {
-    return NextResponse.json({ error: "Manager login required" }, { status: 401 });
-  }
-  return null;
-}
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const denied = await requireManager();
-  if (denied) return denied;
+  const auth = await requireManagerAuth();
+  if (!isAuthContext(auth)) return auth;
 
   const { id } = await params;
   const body = (await request.json()) as {

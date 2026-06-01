@@ -40,7 +40,7 @@ export default function HomePage() {
           </Link>
 
           <Link
-            href="/lead"
+            href="/login?next=/lead"
             className="surface-card flex items-center gap-4 p-4 transition active:scale-[0.99]"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-500/10 text-teal-700">
@@ -51,7 +51,7 @@ export default function HomePage() {
                 Manager dashboard
               </span>
               <span className="text-sm text-zinc-500">
-                Live list, calendar & status updates
+                Sign in with your On Par team account
               </span>
             </span>
           </Link>

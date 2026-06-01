@@ -6,6 +6,7 @@ import { AlertTriangle, Plus, Search, Wifi, WifiOff, Loader2 } from "lucide-reac
 import type { WorkflowStatus } from "@/lib/types/issue";
 import { issueTitle } from "@/lib/format";
 import { countStaleIssues } from "@/lib/issues";
+import { useAuth } from "@/hooks/useAuth";
 import { useIssues } from "@/hooks/useIssues";
 import { useMaintenance } from "@/hooks/useMaintenance";
 import { useLeadNavigation } from "@/hooks/useLeadNavigation";
@@ -17,6 +18,7 @@ import { CalendarView } from "./CalendarView";
 import { MobileBottomNav } from "./MobileBottomNav";
 
 export function ManagerApp() {
+  const { profile } = useAuth();
   const { issues, loading, error, refetch } = useIssues();
   const {
     items: maintenance,
@@ -145,7 +147,7 @@ export function ManagerApp() {
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-[#f4f5f7]">
-      <Sidebar view={view} onViewChange={changeView} />
+      <Sidebar view={view} onViewChange={changeView} profile={profile} />
 
       <div className="flex min-w-0 flex-1 flex-col pb-[72px] lg:pb-0">
         <header

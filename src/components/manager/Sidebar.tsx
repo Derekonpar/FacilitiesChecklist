@@ -1,16 +1,39 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ClipboardList, LayoutGrid, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  CalendarDays,
+  ClipboardList,
+  LayoutGrid,
+  LogOut,
+  Plus,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { IssueView } from "@/lib/types/issue";
+import type { Profile } from "@/lib/types/profile";
+import { canManageTeam } from "@/lib/types/profile";
 
 type SidebarProps = {
   view: IssueView;
   onViewChange: (view: IssueView) => void;
+  profile: Profile | null;
 };
 
-export function Sidebar({ view, onViewChange }: SidebarProps) {
+export function Sidebar({ view, onViewChange, profile }: SidebarProps) {
+  const router = useRouter();
+  const initial =
+    profile?.display_name?.[0] ??
+    profile?.username?.[0] ??
+    "?";
+
+  async function signOut() {
+    await fetch("/api/auth/signout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  }
+
   return (
     <aside className="hidden w-14 shrink-0 flex-col items-center border-r border-zinc-200 bg-white py-3 lg:flex">
       <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a73e8] text-xs font-bold text-white">
@@ -32,6 +55,15 @@ export function Sidebar({ view, onViewChange }: SidebarProps) {
         >
           <CalendarDays className="h-5 w-5" />
         </SidebarBtn>
+        {profile && canManageTeam(profile.role) ? (
+          <Link
+            href="/admin/team"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
+            title="Team permissions"
+          >
+            <Users className="h-5 w-5" />
+          </Link>
+        ) : null}
         <Link
           href="/submit"
           className="mt-2 flex h-10 w-10 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
@@ -41,8 +73,21 @@ export function Sidebar({ view, onViewChange }: SidebarProps) {
         </Link>
       </nav>
 
-      <div className="mt-auto flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs font-medium text-zinc-600">
-        M
+      <div className="mt-auto flex flex-col items-center gap-2">
+        <button
+          type="button"
+          onClick={() => signOut()}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100"
+          title="Sign out"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs font-semibold uppercase text-zinc-700"
+          title={profile?.email}
+        >
+          {initial}
+        </div>
       </div>
     </aside>
   );

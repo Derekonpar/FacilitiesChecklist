@@ -196,7 +196,7 @@ function SubmitForm() {
           Submit another
         </button>
         <Link
-          href="/lead"
+          href="/login?next=/lead"
           className="mt-3 block text-sm font-medium text-[#1a73e8]"
         >
           Open manager dashboard

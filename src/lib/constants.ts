@@ -31,4 +31,3 @@ export type PriorityId = (typeof PRIORITIES)[number]["id"];
 export const ISSUE_STATUSES = ["open", "completed"] as const;
 export type IssueStatus = (typeof ISSUE_STATUSES)[number];
 
-export const MANAGER_SESSION_COOKIE = "onpar_manager_session";
