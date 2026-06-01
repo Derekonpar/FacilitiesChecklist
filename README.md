@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# On Par Entertainment — Facilities Checklist
 
-## Getting Started
+Maintenance issue reporting for floor staff and a MaintainX-style manager dashboard with **real-time** updates.
 
-First, run the development server:
+## Quick start
+
+### 1. Supabase
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In **SQL Editor**, run in order:
+   - `supabase/migrations/001_issues.sql`
+   - `supabase/migrations/002_realtime_rls_storage.sql`
+3. In **Database → Replication**, confirm `issues` is enabled for Realtime (the migration adds it to `supabase_realtime`).
+4. Copy **Project URL**, **anon key**, and **service_role key** from Settings → API.
+
+### 2. Environment variables
+
+Copy `.env.example` to `.env.local`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Fill in:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key (submit + live dashboard) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only (manager complete/recall) |
+| `MANAGER_PIN` | Shared PIN for `/lead` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Add the same variables in **Vercel** → Project → Settings → Environment Variables.
 
-## Learn More
+### 3. Run locally
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Report issue:** http://localhost:3000/submit  
+- **Manager dashboard:** http://localhost:3000/lead (enter `MANAGER_PIN`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+New submissions appear on the dashboard **immediately** via Supabase Realtime.
 
-## Deploy on Vercel
+## Deploy (Vercel)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npx vercel
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Link the GitHub repo and set all env vars above for Production.
+
+## GitHub
+
+```bash
+git remote add origin https://github.com/Derekonpar/FacilitiesChecklist.git
+git push -u origin main
+```
