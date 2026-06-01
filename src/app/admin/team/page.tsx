@@ -16,9 +16,16 @@ const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Admin — dashboard + team",
 };
 
+type AllowlistEntry = {
+  local_part: string;
+  auto_admin: boolean;
+  created_at: string;
+};
+
 function TeamAdmin() {
   const { profile } = useAuth();
   const [users, setUsers] = useState<Profile[]>([]);
+  const [allowlist, setAllowlist] = useState<AllowlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -30,10 +37,21 @@ function TeamAdmin() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/users");
-      const data = (await res.json()) as { users?: Profile[]; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Failed to load team");
-      setUsers(data.users ?? []);
+      const [usersRes, allowRes] = await Promise.all([
+        fetch("/api/admin/users"),
+        fetch("/api/admin/allowlist"),
+      ]);
+      const usersData = (await usersRes.json()) as {
+        users?: Profile[];
+        error?: string;
+      };
+      const allowData = (await allowRes.json()) as {
+        entries?: AllowlistEntry[];
+        error?: string;
+      };
+      if (!usersRes.ok) throw new Error(usersData.error ?? "Failed to load team");
+      setUsers(usersData.users ?? []);
+      setAllowlist(allowData.entries ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -60,6 +78,7 @@ function TeamAdmin() {
       if (!res.ok) throw new Error(data.error ?? "Could not add");
       setAllowMsg(data.message ?? "Added.");
       setNewLocalPart("");
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add");
     } finally {
@@ -109,8 +128,8 @@ function TeamAdmin() {
         </Link>
         <h1 className="mt-2 text-xl font-bold text-zinc-900">Team permissions</h1>
         <p className="text-sm text-zinc-600">
-          Core team are admins automatically. Add new emails here, then set their
-          role after they create an account.
+          Adding someone here only approves sign-up. They appear in the team list
+          below after they create an account at /login — then set their role.
         </p>
       </header>
 
@@ -156,6 +175,49 @@ function TeamAdmin() {
             <Loader2 className="h-8 w-8 animate-spin text-[#1a73e8]" />
           </div>
         ) : (
+          <>
+          {(() => {
+            const joinedUsernames = new Set(users.map((u) => u.username));
+            const pending = allowlist.filter(
+              (e) => !joinedUsernames.has(e.local_part),
+            );
+            if (pending.length === 0) return null;
+            return (
+              <section className="mb-6">
+                <h2 className="text-sm font-semibold text-zinc-900">
+                  Approved — waiting to sign up
+                </h2>
+                <p className="mt-1 text-xs text-zinc-500">
+                  These people can use Create account but are not in the team list
+                  yet.
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {pending.map((e) => (
+                    <li
+                      key={e.local_part}
+                      className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-700"
+                    >
+                      {e.local_part}@onparbar.com
+                      {e.auto_admin ? (
+                        <span className="ml-2 text-xs text-indigo-600">
+                          (auto-admin on sign-up)
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })()}
+
+          <h2 className="mb-2 text-sm font-semibold text-zinc-900">
+            Team members
+          </h2>
+          {users.length === 0 ? (
+            <p className="mb-4 text-sm text-zinc-500">
+              No accounts yet. After someone signs up, they will show here.
+            </p>
+          ) : null}
           <ul className="space-y-3">
             {users.map((u) => (
               <li
@@ -193,6 +255,7 @@ function TeamAdmin() {
               </li>
             ))}
           </ul>
+          </>
         )}
       </div>
     </div>

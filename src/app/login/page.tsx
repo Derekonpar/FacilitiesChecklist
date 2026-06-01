@@ -199,12 +199,20 @@ function LoginForm() {
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      const msg = signUpError.message.includes("Database error")
+        ? "Account could not be created (server setup). Ask an admin to run the latest database fix in Supabase, then try again."
+        : signUpError.message;
+      setError(msg);
       setSubmitting(false);
       return;
     }
 
     if (data.session) {
+      try {
+        await fetch("/api/auth/complete-signup", { method: "POST" });
+      } catch {
+        /* trigger may have created profile */
+      }
       await afterAuthRedirect("signup");
     } else {
       setMessage(
